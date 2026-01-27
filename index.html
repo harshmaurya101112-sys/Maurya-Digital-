@@ -1,8 +1,225 @@
 <!DOCTYPE html>
 <html>
-<head><title>Test App</title></head>
+<head>
+    <title>Maurya Digital</title>
+</head>
 <body>
-    <h1 style="color: blue; text-align: center;">Bhai, App Kaam Kar Rahi Hai!</h1>
-    <p style="text-align: center;">Agar ye dikh raha hai, to Vercel setup sahi hai.</p>
+
+    <!--import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+void main() => runApp(MauryaDigital());            
+class MauryaDigital extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: Row(
+  mainAxisAlignment: MainAxisAlignment.center,
+  children: [
+    // लोगो का गोलाकार हिस्सा
+    Container(
+      padding: EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+      ),
+      child: Icon(Icons.flash_on, color: Colors.orange, size: 20),
+    ),
+    SizedBox(width: 10),
+    // ऐप का नाम
+    Text(
+      "MAURYA DIGITAL",
+      style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2),
+    ),
+  ],
+),
+,
+
+      theme: ThemeData(primarySwatch: Colors.orange, fontFamily: 'Roboto'),
+      home: ServiceDashboard(),
+    );
+  }
+}
+
+class ServiceDashboard extends StatefulWidget {
+  @override
+  _ServiceDashboardState createState() => 
+final seen = <String>{};
+allServices = rawServices.where((service) => seen.add(service['name'])).toList();
+displayedServices = allServices;
+
+_ServiceDashboardState();
+}
+
+class _ServiceDashboardState extends State<ServiceDashboard> {
+  // सेवाएं 
+  final List<Map<String, dynamic>> allServices = [ rawServices
+    // G2C - सरकारी सेवाएँ
+    {"name": "आधार डाउनलोड", "cat": "G2C", "url": "https://uidai.gov.in", "icon": Icons.fingerprint},
+    {"name": "पैन कार्ड", "cat": "G2C", "url": "https://www.onlineservices.nsdl.com", "icon": Icons.badge},
+    {"name": "ई-श्रम रजिस्ट्रेशन", "cat": "G2C", "url": "https://eshram.gov.in", "icon": Icons.work},
+    {"name": "आयुष्मान कार्ड", "cat": "G2C", "url": "https://bis.pmjay.gov.in", "icon": Icons.health_and_safety},
+    {"name": "PM किसान", "cat": "G2C", "url": "https://pmkisan.gov.in", "icon": Icons.agriculture},
+    {"name": "वोटर सर्विस", "cat": "G2C", "url": "https://voters.eci.gov.in", "icon": Icons.how_to_vote},
+    {"name": "पासपोर्ट सेवा", "cat": "G2C", "url": "https://www.passportindia.gov.in", "icon": Icons.book},
+    
+    // Banking & Insurance
+    {"name": "DigiPay (AEPS)", "cat": "Bank", "url": "https://digipay.csccloud.in", "icon": Icons.account_balance_wallet},
+    {"name": "बीमा प्रीमियम", "cat": "Bank", "url": "https://digitalseva.csc.gov.in/", "icon": Icons.security},
+    {"name": "NPS रजिस्ट्रेशन", "cat": "Bank", "url": "https://enps.nsdl.com", "icon": Icons.pie_chart},
+    
+    // Education & Skill
+    {"name": "PMGDisha", "cat": "Edu", "url": "https://www.pmgdisha.in", "icon": Icons.computer},
+    {"name": "NIOS एडमिशन", "cat": "Edu", "url": "https://sdmis.nios.ac.in", "icon": Icons.school},
+    {"name": "कौशल विकास", "cat": "Edu", "url": "https://www.skillindia.gov.in", "icon": Icons.model_training},
+    
+    // Utility & B2C
+    {"name": "बिजली बिल", "cat": "Util", "url": "https://www.bbps.org.in", "icon": Icons.electric_bolt},
+    {"name": "IRCTC टिकट", "cat": "Util", "url": "https://www.irctc.co.in", "icon": Icons.train},
+    {"name": "FASTag", "cat": "Util", "url": "https://www.fastag.org", "icon": Icons.directions_car},
+       // --- G2C & ई-डिस्ट्रिक्ट सेवाएँ ---
+    {"name": "जाति प्रमाण पत्र", "cat": "G2C", "url": "https://edistrict.up.gov.in", "icon": Icons.assignment_ind},
+    {"name": "आय प्रमाण पत्र", "cat": "G2C", "url": "https://edistrict.up.gov.in", "icon": Icons.monetization_on},
+    {"name": "निवास प्रमाण पत्र", "cat": "G2C", "url": "https://edistrict.up.gov.in", "icon": Icons.home_work},
+    {"name": "जन्म प्रमाण पत्र", "cat": "G2C", "url": "https://crsorgi.gov.in", "icon": Icons.child_care},
+    {"name": "मृत्यु प्रमाण पत्र", "cat": "G2C", "url": "https://crsorgi.gov.in", "icon": Icons.hotel},
+    {"name": "दिव्यांग प्रमाण पत्र", "cat": "G2C", "url": "https://www.swavlambancard.gov.in", "icon": Icons.accessible},
+    {"name": "शादी अनुदान", "cat": "G2C", "url": "https://shadianudan.upsdc.gov.in", "icon": Icons.favorite},
+    {"name": "खतौनी (भूलेख)", "cat": "G2C", "url": "https://upbhulekh.gov.in", "icon": Icons.landscape},
+    {"name": "श्रम कार्ड नवीनीकरण", "cat": "G2C", "url": "https://uplabour.gov.in", "icon": Icons.construction},
+    {"name": "पारिवारिक लाभ", "cat": "G2C", "url": "https://nfbs.upsdc.gov.in", "icon": Icons.family_restroom},
+
+    // --- बैंकिंग और पेंशन (Banking & Pension) ---
+    {"name": "जीवन प्रमाण", "cat": "Bank", "url": "https://jeevanpramaan.gov.in", "icon": Icons.verified_user},
+    {"name": "अटल पेंशन योजना", "cat": "Bank", "url": "https://www.npscra.nsdl.co.in", "icon": Icons.savings},
+    {"name": "SBI नेट बैंकिंग", "cat": "Bank", "url": "https://www.onlinesbi.sbi", "icon": Icons.account_balance},
+    {"name": "PNB नेट बैंकिंग", "cat": "Bank", "url": "https://www.pnbindia.in", "icon": Icons.account_balance},
+    {"name": "BoB नेट बैंकिंग", "cat": "Bank", "url": "https://www.bankofbaroda.in", "icon": Icons.account_balance},
+    {"name": "HDFC बैंकिंग", "cat": "Bank", "url": "https://www.hdfcbank.com", "icon": Icons.account_balance},
+    {"name": "ICICI बैंकिंग", "cat": "Bank", "url": "https://www.icicibank.com", "icon": Icons.account_balance},
+    {"name": "पेटीएम बैंक", "cat": "Bank", "url": "https://www.paytmbank.com", "icon": Icons.account_balance_wallet},
+    {"name": "मुद्रा लोन", "cat": "Bank", "url": "https://www.mudra.org.in", "icon": Icons.currency_rupee},
+    {"name": "क्रेडिट स्कोर (CIBIL)", "cat": "Bank", "url": "https://www.cibil.com", "icon": Icons.speed},
+
+    // --- शिक्षा और छात्रवृत्ति (Education) ---
+    {"name": "यूपी स्कॉलरशिप", "cat": "Edu", "url": "https://scholarship.up.gov.in", "icon": Icons.school},
+    {"name": "NSP छात्रवृत्ति", "cat": "Edu", "url": "https://scholarships.gov.in", "icon": Icons.school},
+    {"name": "CCC एग्जाम फॉर्म", "cat": "Edu", "url": "https://student.nielit.gov.in", "icon": Icons.computer},
+    {"name": "CCC एडमिट कार्ड", "cat": "Edu", "url": "https://student.nielit.gov.in", "icon": Icons.assignment},
+    {"name": "CCC रिजल्ट", "cat": "Edu", "url": "https://student.nielit.gov.in", "icon": Icons.grade},
+    {"name": "IGNOU एडमिशन", "cat": "Edu", "url": "https://ignouadmission.samarth.edu.in", "icon": Icons.menu_book},
+    {"name": "UP बोर्ड रिजल्ट", "cat": "Edu", "url": "https://upresults.nic.in", "icon": Icons.poll},
+    {"name": "CBSE रिजल्ट", "cat": "Edu", "url": "https://cbseresults.nic.in", "icon": Icons.poll},
+    {"name": "ITI एडमिशन", "cat": "Edu", "url": "https://scvtup.in", "icon": Icons.settings_suggest},
+    {"name": "Polytechnic फॉर्म", "cat": "Edu", "url": "https://jeecup.admissions.nic.in", "icon": Icons.architecture},
+
+    // --- कृषि और किसान (Agriculture) ---
+    {"name": "ई-नाम (Mandi)", "cat": "G2C", "url": "https://enam.gov.in", "icon": Icons.storefront},
+    {"name": "खाद/उर्वरक लाइसेंस", "cat": "G2C", "url": "https://fert.nic.in", "icon": Icons.grass},
+    {"name": "मृदा स्वास्थ्य कार्ड", "cat": "G2C", "url": "https://soilhealth.dac.gov.in", "icon": Icons.terrain},
+    {"name": "कुसुम योजना", "cat": "G2C", "url": "https://pmkusum.mnre.gov.in", "icon": Icons.wb_sunny},
+    {"name": "फसल बीमा (PMFBY)", "cat": "G2C", "url": "https://pmfby.gov.in", "icon": Icons.umbrella},
+
+    // --- यात्रा और परिवहन (Travel) ---
+    {"name": "बस टिकट (UPSRTC)", "cat": "Util", "url": "https://www.upsrtc.com", "icon": Icons.directions_bus},
+    {"name": "फ्लाइट बुकिंग", "cat": "Util", "url": "https://www.makemytrip.com", "icon": Icons.flight},
+    {"name": "चालान भुगतान", "cat": "Util", "url": "https://echallan.parivahan.gov.in", "icon": Icons.receipt_long},
+    {"name": "गाड़ी का RC स्टेटस", "cat": "Util", "url": "https://vahan.parivahan.gov.in", "icon": Icons.info},
+    {"name": "High Security Plate", "cat": "Util", "url": "https://bookmyhsrp.com", "icon": Icons.minor_crash},
+
+    // --- अन्य महत्वपूर्ण सेवाएँ ---
+    {"name": "ई-कोर्ट स्टेटस", "cat": "G2C", "url": "https://ecourts.gov.in", "icon": Icons.gavel},
+    {"name": "PF (EPFO) चेक", "cat": "Bank", "url": "https://www.epfindia.gov.in", "icon": Icons.payments},
+    {"name": "ई-एफिडेविट", "cat": "G2C", "url": "https://www.onlinestamp.in", "icon": Icons.article},
+    {"name": "डिजीलॉकर", "cat": "G2C", "url": "https://www.digilocker.gov.in", "icon": Icons.cloud_done},
+    {"name": "उद्यम रजिस्ट्रेशन", "cat": "G2C", "url": "https://udyamregistration.gov.in", "icon": Icons.business_center},
+
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("Maurya Digital - CSC Services", style: TextStyle(color: Colors.white)),
+        backgroundColor: Colors.orange[800],
+        elevation: 0,
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            _buildHeader(),
+            _buildCategoryRow("सरकारी सेवाएं (G2C)", "G2C"),
+            _buildCategoryRow("बैंकिंग और बीमा", "Bank"),
+            _buildCategoryRow("शिक्षा और कौशल", "Edu"),
+            _buildCategoryRow("यूटिलिटी बिल", "Util"),
+          ],
+        ),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        items: [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: "होम"),
+          BottomNavigationBarItem(icon: Icon(Icons.history), label: "लेनदेन"),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: "प्रोफाइल"),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: EdgeInsets.all(20),
+      decoration: BoxDecoration(color: Colors.orange[800]),
+      child: TextField(
+        decoration: InputDecoration(
+          hintText: "  खोजें...",
+          prefixIcon: Icon(Icons.search),
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(30)),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryRow(String title, String categoryCode) {
+    var filtered = allServices.where((s) => s['cat'] == categoryCode).toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: EdgeInsets.all(12),
+          child: Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        ),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: NeverScrollableScrollPhysics(),
+          itemCount: filtered.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 4),
+          itemBuilder: (ctx, i) {
+            return InkWell(
+              onTap: () => _openUrl(filtered[i]['url']),
+              child: Column(
+                children: [
+                  CircleAvatar(child: Icon(filtered[i]['icon'], color: Colors.white), backgroundColor: Colors.orange),
+                  SizedBox(height: 5),
+                  Text(filtered[i]['name'], style: TextStyle(fontSize: 10), textAlign: TextAlign.center),
+                ],
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  void _openUrl(String url) async {
+    if (!await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication)) {
+      throw 'Could not launch $url';
+    }
+  }
+}
+ -->
+
 </body>
 </html>
