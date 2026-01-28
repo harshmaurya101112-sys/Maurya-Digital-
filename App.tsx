@@ -65,7 +65,8 @@ const SERVICES_DATA: Service[] = [
   { name: 'UP Jansunwai', url: 'https://jansunwai.up.nic.in', category: ServiceCategory.GOVERNMENT, tags: ['complaint', 'jansunwai'] },
   { name: 'Property Registry UP', url: 'https://igrsup.gov.in', category: ServiceCategory.GOVERNMENT, tags: ['registry', 'igrs'] },
   { name: 'Bhulekh (Land Record)', url: 'https://bhulekh.gov.in', category: ServiceCategory.GOVERNMENT, tags: ['bhulekh', 'khasra', 'khatauni'] },
-
+  { name: 'CM युवा उद्यमी योजना', url: 'https://msme.up.gov.in', category: ServiceCategory.GOVERNMENT, tags: ['cm yuva', 'Government loan', 'cm yuva loan'] },
+  
   // Banking
   { name: 'SBI Net Banking', url: 'https://www.onlinesbi.sbi', category: ServiceCategory.BANKING, tags: ['sbi', 'bank'] },
   { name: 'PNB Banking', url: 'https://www.pnbindia.in', category: ServiceCategory.BANKING, tags: ['pnb', 'bank'] },
