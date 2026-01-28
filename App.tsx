@@ -278,7 +278,7 @@
   </div>
 </div>
 <div className="footer">
-  <p>
+  </p>
     © 2026 Maurya Jan Seva Kendra | डिज़ाइन और सुरक्षा Harsh Maurya द्वारा निर्मित | सभी अधिकार सुरक्षित
   </p>
 </div>
