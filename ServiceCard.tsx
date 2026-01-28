@@ -27,7 +27,7 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service }) => {
       {/* Bottom Corner Arrow */}
       <div className="flex justify-end items-end mt-4">
         <div className="w-8 h-8 bg-gray-50 rounded-lg flex items-center justify-center group-hover:bg-blue-600 group-hover:rotate-[-45deg] transition-all duration-300">
-          <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-white" />
+          <ArrowRight→  className="w-4 h-4 text-gray-400 group-hover:text-white" />
         </div>
       </div>
       
