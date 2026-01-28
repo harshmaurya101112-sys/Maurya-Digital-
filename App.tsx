@@ -38,7 +38,7 @@ const CATEGORIES: Category[] = [
 
 const ALL_SERVICES: Service[] = [
   // G2C - सरकारी सेवाएँ
-  { name: "आधार डाउनलोड", cat: "G2C", url: "https://uidai.gov.in", iconName: "Fingerprint", keywords: ["aadhar", "uidai", "card", "download", "biometric", "address update"] },
+  { name: "आधार कार्ड", cat: "G2C", url: "https://uidai.gov.in", iconName: "Fingerprint", keywords: ["aadhar", "uidai", "card", "download", "biometric", "address update"] },
   { name: "पैन कार्ड", cat: "G2C", url: "https://www.onlineservices.nsdl.com", iconName: "IdCard", keywords: ["pan", "income tax", "card", "nsdl", "uti", "pancard"] },
   { name: "ई-श्रम रजिस्ट्रेशन", cat: "G2C", url: "https://eshram.gov.in", iconName: "Briefcase", keywords: ["eshram", "labour", "card", "shramik", "worker"] },
   { name: "आयुष्मान कार्ड", cat: "G2C", url: "https://bis.pmjay.gov.in", iconName: "HeartPulse", keywords: ["ayushman", "health", "golden card", "pmjay", "hospital", "modi care"] },
