@@ -267,14 +267,14 @@
       CoWIN Vaccine
     </a>
     <a href="https://www.ncs.gov.in" target="_blank" className="card">
-      National Career Service
+          National Career Service
     </a>
     <a href="https://www.gepnic.gov.in" target="_blank" className="card">
       E-Tenders
     </a>
     <a href="https://eprocure.gov.in" target="_blank" className="card">
       Central Procurement
-      </a>
+    </a>
   </div>
 </div>
 <div className="footer">
@@ -282,7 +282,6 @@
     © 2026 Maurya Jan Seva Kendra | डिज़ाइन और सुरक्षा Harsh Maurya द्वारा निर्मित | सभी अधिकार सुरक्षित
   </p>
 </div>
-<script>
   function searchFunction() \{
             let input = document.getElementById('searchInput').value.toUpperCase();
             let cards = document.getElementsByClassName('card');
