@@ -20,7 +20,7 @@ import {
 import { UserProfile, Transaction } from './types';
 
 // --- CONFIGURATION ---
-export const ADMIN_EMAIL = 'admin@maurya.com'; 
+export const ADMIN_EMAIL = 'harsh.maurya101112@gmail.com'; 
 
 const getEnv = (key: string) => {
   // Vite specific environment check
