@@ -23,7 +23,7 @@ import {
 import { UserProfile, Transaction } from './types';
 
 // अपनी एडमिन ईमेल यहाँ बदलें (Replace with your own email)
-const ADMIN_EMAIL = 'admin@maurya.com'; 
+const ADMIN_EMAIL = 'harsh.maurya101112@gmail.com'; 
 
 const firebaseConfig = {
   apiKey: process.env.VITE_FIREBASE_API_KEY,
