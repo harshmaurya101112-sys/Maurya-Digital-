@@ -97,7 +97,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
               <div className="relative">
                 <Mobile className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input 
-                  type="Mobile Number" required placeholder={10 अंको का}
+                  type="Mobile Number" required placeholder={दसअंको का}
                   className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-gray-100 rounded-2xl focus:outline-none focus:border-blue-500 font-bold text-sm"
                   value={Mobile Number} onChange={(e) => setMobileNumber(e.target.value)}
                 />
