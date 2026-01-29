@@ -43,7 +43,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
   };
 
   return (
-    <div className="min-h-screen bg-blue-950 flex items-center justify-center p-6 relative overflow-hidden">
+    <div className="min-h-screen bg-skyblue-950 flex items-center justify-center p-6 relative overflow-hidden">
       <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-blue-800 rounded-full blur-[150px] opacity-20 -translate-x-1/2 -translate-y-1/2"></div>
       <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-orange-600 rounded-full blur-[150px] opacity-10 translate-x-1/2 translate-y-1/2"></div>
 
@@ -54,7 +54,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
               <Monitor className="w-10 h-10" />
             </div>
             <h1 className="text-3xl font-black text-blue-950 tracking-tight uppercase">Maurya Portal</h1>
-            <p className="text-[10px] font-black text-orange-600 uppercase tracking-[0.2em] mt-2">असली Firebase लॉगिन</p>
+            <p className="text-[10px] font-black text-orange-600 uppercase tracking-[0.2em] mt-2">लॉगिनपेज</p>
           </div>
 
           {error && (
@@ -87,6 +87,19 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
                   type="email" required placeholder={ADMIN_HINT}
                   className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-gray-100 rounded-2xl focus:outline-none focus:border-blue-500 font-bold text-sm"
                   value={email} onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+            </div>
+
+            
+            <div className="space-y-1">
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">मोबाइल नम्बर (Mobile Number)</label>
+              <div className="relative">
+                <Mobile className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input 
+                  type="Mobile Number" required placeholder={10 अंको का}
+                  className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-gray-100 rounded-2xl focus:outline-none focus:border-blue-500 font-bold text-sm"
+                  value={Mobile Number} onChange={(e) => setMobileNumber(e.target.value)}
                 />
               </div>
             </div>
