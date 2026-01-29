@@ -115,7 +115,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user }) => {
               <Shield className="w-8 h-8" />
             </div>
             <h4 className="font-black text-gray-800 uppercase tracking-tight">Security Status</h4>
-            <p className="text-xs text-gray-500 font-medium mt-2 leading-relaxed">आपका अकाउंट पूरी तरह से सुरक्षित है और Firebase Authentication से जुड़ा हुआ है।</p>
+            <p className="text-xs text-gray-500 font-medium mt-2 leading-relaxed">आपका अकाउंट पूरी तरह से सुरक्षित है।</p>
             <div className="mt-6 pt-6 border-t border-gray-50">
               <div className="flex justify-between items-center text-xs mb-4">
                 <span className="font-bold text-gray-400">2FA Status</span>
