@@ -9,8 +9,33 @@ export enum ServiceCategory {
 }
 
 export interface Service {
+  id: string;
   name: string;
   url: string;
   category: ServiceCategory;
   tags: string[];
+  fee: number;
+  featured?: boolean;
+}
+
+export interface Transaction {
+  id: string;
+  serviceName: string;
+  amount: number;
+  type: 'debit' | 'credit';
+  date: string;
+  status: 'success' | 'failed' | 'pending';
+  prevBalance: number;
+  newBalance: number;
+}
+
+export interface UserProfile {
+  uid: string;
+  email: string;
+  displayName: string;
+  phone?: string;
+  address?: string;
+  walletBalance: number;
+  transactions: Transaction[];
+  isAdmin?: boolean;
 }
