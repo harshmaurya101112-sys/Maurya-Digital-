@@ -12,7 +12,7 @@ import ProfilePage from './pages/Profile';
 import AdminPage from './pages/Admin';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
-import { Bell, Heart, CheckCircle, ShieldAlert, Key, HelpCircle } from 'lucide-react';
+import { Bell, Heart, CheckCircle, ShieldAlert, HelpCircle } from 'lucide-react';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -21,7 +21,6 @@ const App: React.FC = () => {
   const [notification, setNotification] = useState<string | null>(null);
 
   useEffect(() => {
-    // If config is missing, stop loading and let the error UI handle it
     if (!isConfigValid || !auth) {
       setLoading(false);
       return;
@@ -55,7 +54,7 @@ const App: React.FC = () => {
           </div>
           <h2 className="text-3xl font-black text-slate-900 mb-4 uppercase">सिस्टम सेटअप आवश्यक है</h2>
           <p className="text-slate-500 text-sm font-medium mb-10 leading-relaxed">
-            आपके पोर्टल को चालू करने के लिए <b>Firebase API Keys</b> की आवश्यकता है। चूंकि GitHub पर <code className="bg-slate-100 px-2 py-1 rounded text-red-600">.env</code> फ़ाइल नहीं भेजी जाती, इसलिए आपको इन्हें GitHub की Settings में डालना होगा।
+            आपके पोर्टल को चालू करने के लिए <b>Firebase API Keys</b> की आवश्यकता है। कृपया इन्हें GitHub की Settings में अपडेट करें।
           </p>
           
           <div className="text-left bg-slate-50 p-6 rounded-[2rem] border border-slate-100 space-y-4 mb-10">
@@ -65,11 +64,11 @@ const App: React.FC = () => {
             </div>
             <div className="flex items-start gap-4">
               <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 mt-1">2</div>
-              <p className="text-xs font-bold text-slate-700"><b>Secrets and variables > Actions</b> में जाएँ।</p>
+              <p className="text-xs font-bold text-slate-700"><b>Secrets and variables &gt; Actions</b> में जाएँ।</p>
             </div>
             <div className="flex items-start gap-4">
               <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 mt-1">3</div>
-              <p className="text-xs font-bold text-slate-700">यहाँ "New repository secret" पर क्लिक करके अपनी सारी Keys (VITE_FIREBASE_...) भरें।</p>
+              <p className="text-xs font-bold text-slate-700">यहाँ <b>New repository secret</b> में अपनी API Keys भरें।</p>
             </div>
           </div>
 
