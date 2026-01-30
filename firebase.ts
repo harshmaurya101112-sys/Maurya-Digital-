@@ -1,173 +1,151 @@
-
+import { 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword, 
+  signOut, 
+  onAuthStateChanged as firebaseOnAuthStateChanged 
+} from 'firebase/auth';
+import { 
+  doc, 
+  setDoc, 
+  getDoc, 
+  updateDoc, 
+  collection, 
+  query, 
+  orderBy, 
+  onSnapshot, 
+  addDoc, 
+  getDocs,
+  where,
+  runTransaction
+} from 'firebase/firestore';
+import { auth, db } from './firebaseConfig'; // पक्का करें कि यहाँ से auth और db आ रहा है
 import { UserProfile, Transaction } from './types';
 
-const DB_KEYS = {
-  USERS: 'maurya_portal_users_v4', // Incremented version to clear old inconsistent data
-  SESSION: 'maurya_active_session_id',
-  HISTORY: 'maurya_tx_history_v4_'
-};
+// --- AUTH SECTION ---
 
-const getFromStorage = (key: string) => {
-  try {
-    const data = localStorage.getItem(key);
-    return data ? JSON.parse(data) : null;
-  } catch (e) {
-    return null;
-  }
-};
-
-const saveToStorage = (key: string, data: any) => {
-  localStorage.setItem(key, JSON.stringify(data));
-};
-
-// Initialize session immediately on load
-const savedSession = localStorage.getItem(DB_KEYS.SESSION);
-export const auth = { 
-  currentUser: savedSession ? { uid: savedSession } : null 
-};
-
-type AuthCallback = (user: any) => void;
-const authListeners: AuthCallback[] = [];
-
-export const onAuthStateChanged = (authObj: any, callback: AuthCallback) => {
-  authListeners.push(callback);
-  
-  // Persistence Check
-  const sessionUid = localStorage.getItem(DB_KEYS.SESSION);
-  if (sessionUid) {
-    const users = getFromStorage(DB_KEYS.USERS) || [];
-    const user = users.find((u: any) => u.uid === sessionUid);
-    if (user) {
-      const { password, ...safeUser } = user;
-      callback(safeUser);
+// यूजर की लॉगिन स्टेट चेक करने के लिए
+export const onAuthStateChanged = (unusedAuth: any, callback: (user: any) => void) => {
+  return firebaseOnAuthStateChanged(auth, async (firebaseUser) => {
+    if (firebaseUser) {
+      // यूजर लॉगिन है, Firestore से उसका पूरा डेटा लाएं
+      const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
+      if (userDoc.exists()) {
+        callback({ ...userDoc.data(), uid: firebaseUser.uid });
+      } else {
+        callback(null);
+      }
     } else {
       callback(null);
     }
-  } else {
-    callback(null);
-  }
-  
-  return () => {
-    const index = authListeners.indexOf(callback);
-    if (index > -1) authListeners.splice(index, 1);
-  };
+  });
 };
 
 export const signupUser = async (name: string, email: string, pass: string, mobile: string): Promise<UserProfile> => {
-  const users = getFromStorage(DB_KEYS.USERS) || [];
-  if (users.find((u: any) => u.email.toLowerCase() === email.toLowerCase())) {
-    throw { code: 'auth/email-already-in-use', message: 'Email already exists' };
+  try {
+    // 1. Firebase Auth में अकाउंट बनाना
+    const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+    const uid = userCredential.user.uid;
+
+    const newUser: UserProfile = {
+      uid: uid,
+      email: email.toLowerCase(),
+      displayName: name,
+      mobile: mobile,
+      walletBalance: 0,
+      isAdmin: email.toLowerCase() === 'harsh.maurya101112@gmail.com',
+      createdAt: new Date().toISOString()
+    };
+
+    // 2. Firestore डेटाबेस में यूजर प्रोफाइल सेव करना
+    await setDoc(doc(db, "users", uid), newUser);
+    return newUser;
+  } catch (error: any) {
+    throw { code: error.code, message: error.message };
   }
-
-  const newUser: UserProfile = {
-    uid: 'USR' + Math.random().toString(36).substr(2, 9).toUpperCase(),
-    email: email.toLowerCase(),
-    displayName: name,
-    mobile: mobile,
-    walletBalance: 0,
-    isAdmin: email.toLowerCase() === 'harsh.maurya101112@gmail.com',
-    createdAt: new Date().toISOString()
-  };
-
-  users.push({ ...newUser, password: pass });
-  saveToStorage(DB_KEYS.USERS, users);
-  localStorage.setItem(DB_KEYS.SESSION, newUser.uid);
-  
-  authListeners.forEach(cb => cb(newUser));
-  return newUser;
 };
 
 export const loginUser = async (email: string, pass: string): Promise<UserProfile> => {
-  const users = getFromStorage(DB_KEYS.USERS) || [];
-  const found = users.find((u: any) => u.email.toLowerCase() === email.toLowerCase() && u.password === pass);
-
-  if (!found) {
-    throw { code: 'auth/invalid-credential', message: 'Invalid email or password' };
+  try {
+    const userCredential = await signInWithEmailAndPassword(auth, email, pass);
+    const userDoc = await getDoc(doc(db, "users", userCredential.user.uid));
+    
+    if (!userDoc.exists()) throw new Error("User data not found");
+    return userDoc.data() as UserProfile;
+  } catch (error: any) {
+    throw { code: error.code, message: "Invalid email or password" };
   }
-
-  const { password, ...userData } = found;
-  localStorage.setItem(DB_KEYS.SESSION, userData.uid);
-  authListeners.forEach(cb => cb(userData));
-  return userData as UserProfile;
 };
 
 export const logoutUser = async () => {
-  localStorage.removeItem(DB_KEYS.SESSION);
-  authListeners.forEach(cb => cb(null));
+  await signOut(auth);
 };
 
-export const db = {};
-export const doc = (db: any, col: string, id: string) => ({ col, id });
+// --- DATABASE / WALLET SECTION ---
 
-export const onSnapshot = (docRef: any, callback: (snap: any) => void) => {
-  const trigger = () => {
-    const users = getFromStorage(DB_KEYS.USERS) || [];
-    const user = users.find((u: any) => u.uid === docRef.id);
-    callback({ exists: () => !!user, data: () => user });
-  };
-  trigger();
-  // Simple polling for mock real-time
-  const interval = setInterval(trigger, 2000);
-  return () => clearInterval(interval);
+// रियल-टाइम यूजर डेटा (Balance आदि) के लिए
+export const onSnapshotUser = (uid: string, callback: (data: any) => void) => {
+  return onSnapshot(doc(db, "users", uid), (snapshot) => {
+    callback({ exists: () => snapshot.exists(), data: () => snapshot.data() });
+  });
 };
 
-export const updateDoc = async (docRef: any, data: any) => {
-  const users = getFromStorage(DB_KEYS.USERS) || [];
-  const idx = users.findIndex((u: any) => u.uid === docRef.id);
-  if (idx > -1) {
-    users[idx] = { ...users[idx], ...data };
-    saveToStorage(DB_KEYS.USERS, users);
-  }
-};
-
+// वॉलेट अपडेट (Transaction के साथ)
 export const updateWalletOnDB = async (uid: string, amount: number, service: string, type: 'debit' | 'credit', pin?: string) => {
-  const users = getFromStorage(DB_KEYS.USERS) || [];
-  const idx = users.findIndex((u: any) => u.uid === uid);
-  if (idx === -1) throw new Error("User not found");
-
-  const user = users[idx];
-  if (type === 'debit' && user.walletPin && pin !== user.walletPin) throw new Error("Wrong PIN");
-  if (type === 'debit' && user.walletBalance < amount) throw new Error("Insufficient Balance");
-
-  const oldBal = user.walletBalance;
-  const newBal = type === 'debit' ? oldBal - amount : oldBal + amount;
+  const userRef = doc(db, "users", uid);
   
-  users[idx].walletBalance = newBal;
-  saveToStorage(DB_KEYS.USERS, users);
+  return await runTransaction(db, async (transaction) => {
+    const userDoc = await transaction.get(userRef);
+    if (!userDoc.exists()) throw new Error("User not found");
 
-  const tx: Transaction = {
-    id: 'TX' + Date.now(),
-    serviceName: service,
-    amount,
-    type,
-    date: new Date().toLocaleString(),
-    status: 'success',
-    prevBalance: oldBal,
-    newBalance: newBal
-  };
+    const userData = userDoc.data();
+    if (type === 'debit' && userData.walletPin && pin !== userData.walletPin) throw new Error("Wrong PIN");
+    if (type === 'debit' && userData.walletBalance < amount) throw new Error("Insufficient Balance");
 
-  const hKey = DB_KEYS.HISTORY + uid;
-  const history = getFromStorage(hKey) || [];
-  history.unshift(tx);
-  saveToStorage(hKey, history);
+    const oldBal = userData.walletBalance;
+    const newBal = type === 'debit' ? oldBal - amount : oldBal + amount;
 
-  return tx;
+    // 1. बैलेंस अपडेट करें
+    transaction.update(userRef, { walletBalance: newBal });
+
+    // 2. हिस्ट्री में ट्रांजैक्शन रिकॉर्ड जोड़ें
+    const txRef = doc(collection(db, "users", uid, "history"));
+    const tx: Transaction = {
+      id: txRef.id,
+      serviceName: service,
+      amount,
+      type,
+      date: new Date().toLocaleString(),
+      status: 'success',
+      prevBalance: oldBal,
+      newBalance: newBal
+    };
+    transaction.set(txRef, tx);
+
+    return tx;
+  });
 };
 
-export const getAllUsers = async () => getFromStorage(DB_KEYS.USERS) || [];
-export const adminUpdateUser = async (uid: string, data: any) => updateDoc({ id: uid }, data);
-export const makeUserAdmin = async (uid: string) => updateDoc({ id: uid }, { isAdmin: true });
-export const setWalletPinDB = async (uid: string, pin: string) => updateDoc({ id: uid }, { walletPin: pin });
-export const processSecurePayment = async (amt: number) => true;
+// हिस्ट्री सुनने के लिए (Real-time)
+export const onSnapshotCollection = (refObj: any, callback: (snap: any) => void) => {
+  const uid = refObj.path[1];
+  const q = query(collection(db, "users", uid, "history"), orderBy("date", "desc"));
+  
+  return onSnapshot(q, (snapshot) => {
+    callback({ docs: snapshot.docs.map(d => ({ data: () => d.data() })) });
+  });
+};
 
-export const collection = (db: any, ...path: string[]) => ({ path });
-export const onSnapshotCollection = (ref: any, callback: (snap: any) => void) => {
-  const uid = ref.path[1];
-  const trigger = () => {
-    const data = getFromStorage(DB_KEYS.HISTORY + uid) || [];
-    callback({ docs: data.map((d: any) => ({ data: () => d })) });
-  };
-  trigger();
-  const interval = setInterval(trigger, 3000);
-  return () => clearInterval(interval);
+// --- ADMIN SECTION ---
+
+export const getAllUsers = async () => {
+  const querySnapshot = await getDocs(collection(db, "users"));
+  return querySnapshot.docs.map(doc => doc.data());
+};
+
+export const adminUpdateUser = async (uid: string, data: any) => {
+  await updateDoc(doc(db, "users", uid), data);
+};
+
+export const setWalletPinDB = async (uid: string, pin: string) => {
+  await updateDoc(doc(db, "users", uid), { walletPin: pin });
 };
