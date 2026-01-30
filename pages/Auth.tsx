@@ -30,6 +30,57 @@ const AuthPage: React.FC<AuthPageProps> = ({ onAuthSuccess }) => {
         await signupUser(name, email, password);
       }
       onAuthSuccess();
+import { 
+  getAuth, 
+  signInWithEmailAndPassword, 
+  setPersistence, 
+  browserLocalPersistence, 
+  signOut 
+} from "firebase/auth";
+
+const auth = getAuth();
+
+// 1. Session ko "Local" set karein taaki user browser band hone par bhi login rahe
+setPersistence(auth, browserLocalPersistence)
+  .then(() => {
+    const loginForm = document.getElementById('login-form');
+
+    if (loginForm) {
+      loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault(); // Mobile refresh fix
+
+        const email = (document.getElementById('email') as HTMLInputElement).value;
+        const password = (document.getElementById('password') as HTMLInputElement).value;
+
+        try {
+          // 2. Pehle se login user ko clear karein (Safe Login)
+          if (auth.currentUser) {
+            await signOut(auth);
+          }
+
+          // 3. Login shuru karein
+          const userCredential = await signInWithEmailAndPassword(auth, email, password);
+          console.log("Login Success:", userCredential.user);
+          
+          alert("Login Safal!");
+          window.location.href = "/profile"; // Redirection
+          
+        } catch (error: any) {
+          console.error("Login Error:", error.code);
+          // Mobile par error dekhne ke liye alert
+          if (error.code === 'auth/wrong-password') alert("Galat Password!");
+          else if (error.code === 'auth/user-not-found') alert("User nahi mila!");
+          else alert("Error: " + error.message);
+        }
+      });
+    }
+  })
+  .catch((error) => {
+    console.error("Persistence Error:", error);
+  });
+
+      
+      
     } catch (err: any) {
       let message = "कुछ गलत हुआ। कृपया दोबारा प्रयास करें।";
       if (err.code === 'auth/wrong-password') message = "गलत पासवर्ड।";
