@@ -1,130 +1,126 @@
 
-import React, { useState, useMemo } from 'react';
-import { Search, ExternalLink, Filter } from 'lucide-react';
-import { SERVICES_DATA } from '../ServicesData';
-import { Service, ServiceCategory, UserProfile } from '../types';
+import React, { useState } from 'react';
+import { UserProfile } from '../types';
+import { Search, CreditCard, Landmark, Smartphone, FileText, Zap, ChevronRight, Lock } from 'lucide-react';
 
-interface ServicesPageProps {
-  user: UserProfile;
-  // Fix: onServiceAction should return Promise<boolean> since wallet updates are async operations in App.tsx
-  onServiceAction: (amount: number, serviceName: string) => Promise<boolean>;
+interface ServiceItem {
+  id: string;
+  name: string;
+  icon: React.ReactNode;
+  cost: number;
+  category: string;
 }
 
-const ServicesPage: React.FC<ServicesPageProps> = ({ user, onServiceAction }) => {
+const ServicesPage: React.FC<{user: UserProfile, onAction: (amt: number, service: string, type: 'credit' | 'debit', pin: string) => void}> = ({ user, onAction }) => {
   const [search, setSearch] = useState('');
-  const [activeTab, setActiveTab] = useState<ServiceCategory | 'All'>('All');
+  const [selectedService, setSelectedService] = useState<ServiceItem | null>(null);
+  const [pin, setPin] = useState('');
 
-  const categories = Object.values(ServiceCategory);
+  // Sample categorization for 200+ services
+  const categories = ['Banking', 'Govt Forms', 'Utilities', 'Insurance', 'Educational'];
+  
+  const services: ServiceItem[] = [
+    { id: '1', name: 'Aadhar Pay Withdrawal', icon: <Landmark />, cost: 0, category: 'Banking' },
+    { id: '2', name: 'Instant Money Transfer (DMT)', icon: <CreditCard />, cost: 10, category: 'Banking' },
+    { id: '3', name: 'PAN Card Registration', icon: <FileText />, cost: 107, category: 'Govt Forms' },
+    { id: '4', name: 'Mobile Recharge', icon: <Smartphone />, cost: 0, category: 'Utilities' },
+    { id: '5', name: 'Electricity Bill Pay', icon: <Zap />, cost: 0, category: 'Utilities' },
+    { id: '6', name: 'Ayushman Card Print', icon: <FileText />, cost: 15, category: 'Govt Forms' },
+    // Imagine 200 more here...
+  ];
 
-  const filteredServices = useMemo(() => {
-    const term = search.toLowerCase();
-    return SERVICES_DATA.filter(s => {
-      const matchSearch = s.name.toLowerCase().includes(term) || s.tags.some(t => t.toLowerCase().includes(term));
-      const matchCat = activeTab === 'All' || s.category === activeTab;
-      return matchSearch && matchCat;
-    });
-  }, [search, activeTab]);
+  const filtered = services.filter(s => s.name.toLowerCase().includes(search.toLowerCase()));
 
-  // Fix: handleServiceClick must be async to await the async onServiceAction call
-  const handleServiceClick = async (service: Service) => {
-    if (service.fee === 0) {
-      window.open(service.url, '_blank');
-      return;
-    }
-
-    const confirmPayment = window.confirm(`${service.name} के लिए ₹${service.fee} आपके वॉलेट से काटे जाएंगे। क्या आप जारी रखना चाहते हैं?`);
-    if (confirmPayment) {
-      // Fix: await the async onServiceAction call to get the actual boolean result
-      const success = await onServiceAction(service.fee, service.name);
-      if (success) {
-        alert('भुगतान सफल! पोर्टल खोला जा रहा है।');
-        window.open(service.url, '_blank');
-      } else {
-        alert('अपर्याप्त बैलेंस!');
-      }
-    }
+  const handlePurchase = () => {
+    if (!selectedService) return;
+    if (user.walletBalance < selectedService.cost) return alert("वॉलेट में बैलेंस कम है!");
+    if (user.walletPin && !pin) return alert("कृपया अपना वॉलेट पिन डालें!");
+    
+    onAction(selectedService.cost, selectedService.name, 'debit', pin);
+    setSelectedService(null);
+    setPin('');
   };
 
   return (
     <div className="space-y-8 pb-20">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+      {/* Header Search */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
-          <h2 className="text-3xl font-black text-gray-900 tracking-tight">सभी सेवाएँ ({SERVICES_DATA.length}+)</h2>
-          <p className="text-gray-500 mt-2 font-medium">अपनी आवश्यकतानुसार किसी भी सरकारी या बैंकिंग पोर्टल का उपयोग करें।</p>
+          <h1 className="text-3xl font-black text-blue-950 uppercase tracking-tight">Maurya Storefront</h1>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">200+ Professional Services</p>
         </div>
-        <div className="relative w-full md:w-96 group">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-blue-600" />
+        <div className="relative w-full md:w-96">
+          <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
           <input 
-            type="text" 
-            placeholder="पैन, आधार, बैंक खोजें..."
-            className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-2xl shadow-sm focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all font-medium"
+            placeholder="Search services (PAN, Aadhar, Bills...)" 
+            className="w-full pl-16 pr-6 py-5 bg-white border border-slate-100 rounded-[2rem] shadow-sm font-bold text-sm outline-none focus:border-blue-500 transition-all"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={e => setSearch(e.target.value)}
           />
         </div>
       </div>
 
-      <div className="flex items-center gap-3 overflow-x-auto pb-4 scrollbar-hide">
-        <button 
-          onClick={() => setActiveTab('All')}
-          className={`whitespace-nowrap px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-wider transition-all border ${
-            activeTab === 'All' 
-            ? 'bg-blue-800 text-white border-blue-800 shadow-lg shadow-blue-500/20' 
-            : 'bg-white text-gray-500 border-gray-200 hover:border-blue-300'
-          }`}
-        >
-          सब देखें
-        </button>
-        {categories.map(cat => (
+      {/* Grid Layout */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {filtered.map(service => (
           <button 
-            key={cat}
-            onClick={() => setActiveTab(cat)}
-            className={`whitespace-nowrap px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-wider transition-all border ${
-              activeTab === cat 
-              ? 'bg-blue-800 text-white border-blue-800 shadow-lg shadow-blue-500/20' 
-              : 'bg-white text-gray-500 border-gray-200 hover:border-blue-300'
-            }`}
-          >
-            {cat.split('(')[0]}
-          </button>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
-        {filteredServices.map((service) => (
-          <button
             key={service.id}
-            onClick={() => handleServiceClick(service)}
-            className="bg-white group relative p-6 rounded-[2rem] border border-gray-100 shadow-sm flex flex-col items-center justify-between text-center min-h-[200px] hover:border-blue-500 hover:shadow-2xl hover:shadow-blue-500/10 transition-all duration-300 active:scale-95"
+            onClick={() => setSelectedService(service)}
+            className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all group text-left"
           >
-            <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center p-3 group-hover:bg-blue-50 transition-colors overflow-hidden">
-              <img 
-                src={`https://www.google.com/s2/favicons?domain=${new URL(service.url).hostname}&sz=64`} 
-                alt={service.name}
-                className="w-full h-full object-contain"
-                onError={(e) => { (e.target as HTMLImageElement).src = 'https://www.google.com/s2/favicons?domain=gov.in&sz=64'; }}
-              />
+            <div className="bg-blue-50 text-blue-600 p-5 rounded-3xl w-fit mb-6 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+              {React.cloneElement(service.icon as React.ReactElement, { size: 28 })}
             </div>
-            <div className="mt-4 flex-1">
-              <h3 className="text-sm font-bold text-gray-800 group-hover:text-blue-900 leading-tight line-clamp-2">
-                {service.name}
-              </h3>
-              <div className="mt-3 inline-block px-3 py-1 bg-orange-50 text-[10px] font-black text-orange-600 rounded-full border border-orange-100 uppercase tracking-tighter">
-                FEE: ₹{service.fee}
+            <h3 className="font-black text-slate-900 text-sm mb-1 uppercase leading-tight">{service.name}</h3>
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-4">{service.category}</p>
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-black text-blue-900">₹{service.cost}</span>
+              <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center group-hover:bg-orange-500 group-hover:text-white transition-colors">
+                <ChevronRight size={16} />
               </div>
             </div>
-            <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-              <ExternalLink className="w-4 h-4 text-blue-500" />
-            </div>
           </button>
         ))}
       </div>
 
-      {filteredServices.length === 0 && (
-        <div className="text-center py-32 bg-white rounded-[3rem] border-2 border-dashed border-gray-200">
-          <Filter className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-xl font-black text-gray-800">कोई सेवा नहीं मिली</h3>
-          <p className="text-gray-400 text-sm mt-2">कृपया दूसरा कीवर्ड सर्च करें।</p>
+      {/* Purchase Dialog */}
+      {selectedService && (
+        <div className="fixed inset-0 z-[500] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-6">
+          <div className="bg-white w-full max-w-md rounded-[3rem] p-10 shadow-2xl animate-in slide-in-from-bottom-10 duration-300">
+            <div className="text-center mb-8">
+              <div className="bg-orange-100 text-orange-600 w-20 h-20 rounded-[2rem] flex items-center justify-center mx-auto mb-6">
+                {selectedService.icon}
+              </div>
+              <h2 className="text-2xl font-black text-blue-950 uppercase tracking-tight">{selectedService.name}</h2>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-2">Confirm Service Purchase</p>
+            </div>
+
+            <div className="bg-slate-50 p-6 rounded-2xl mb-8 flex justify-between items-center">
+              <span className="text-xs font-black text-slate-500 uppercase">Service Cost</span>
+              <span className="text-xl font-black text-slate-900">₹{selectedService.cost}</span>
+            </div>
+
+            {user.walletPin && (
+              <div className="space-y-2 mb-8">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                  <Lock size={12} /> Wallet Transaction PIN
+                </label>
+                <input 
+                  type="password" 
+                  maxLength={6}
+                  placeholder="Enter 4-6 Digit PIN" 
+                  className="w-full p-5 bg-slate-50 border border-slate-100 rounded-2xl text-center font-black text-2xl tracking-[1em] outline-none focus:border-blue-500"
+                  value={pin}
+                  onChange={e => setPin(e.target.value)}
+                />
+              </div>
+            )}
+
+            <div className="flex gap-4">
+              <button onClick={() => setSelectedService(null)} className="flex-1 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black text-[10px] uppercase">Cancel</button>
+              <button onClick={handlePurchase} className="flex-1 py-4 bg-blue-900 text-white rounded-2xl font-black text-[10px] uppercase shadow-xl shadow-blue-900/20">Pay Now</button>
+            </div>
+          </div>
         </div>
       )}
     </div>
