@@ -3,14 +3,18 @@ import { UserProfile, Transaction } from './types';
 
 // Simulated Database Storage
 const DB_KEYS = {
-  USERS: 'maurya_users',
-  SESSION: 'maurya_active_session',
-  HISTORY: 'maurya_history_'
+  USERS: 'maurya_users_v2',
+  SESSION: 'maurya_session_active',
+  HISTORY: 'maurya_history_v2_'
 };
 
 const getFromStorage = (key: string) => {
-  const data = localStorage.getItem(key);
-  return data ? JSON.parse(data) : null;
+  try {
+    const data = localStorage.getItem(key);
+    return data ? JSON.parse(data) : null;
+  } catch (e) {
+    return null;
+  }
 };
 
 const saveToStorage = (key: string, data: any) => {
@@ -28,13 +32,14 @@ const authListeners: AuthCallback[] = [];
 export const onAuthStateChanged = (authObj: any, callback: AuthCallback) => {
   authListeners.push(callback);
   
-  // Initial check for session
+  // Persistence Check: Always check storage immediately
   const sessionUid = localStorage.getItem(DB_KEYS.SESSION);
   if (sessionUid) {
     const users = getFromStorage(DB_KEYS.USERS) || [];
     const user = users.find((u: any) => u.uid === sessionUid);
     if (user) {
-      callback(user);
+      const { password, ...safeUser } = user;
+      callback(safeUser);
     } else {
       callback(null);
     }
@@ -54,13 +59,13 @@ export const signupUser = async (name: string, email: string, pass: string, mobi
   await new Promise(r => setTimeout(r, 800));
   const users = getFromStorage(DB_KEYS.USERS) || [];
   
-  if (users.find((u: any) => u.email === email)) {
+  if (users.find((u: any) => u.email.toLowerCase() === email.toLowerCase())) {
     throw { code: 'auth/email-already-in-use', message: 'ईमेल पहले से मौजूद है' };
   }
 
   const isAdmin = email.toLowerCase() === MASTER_ADMIN_EMAIL.toLowerCase();
   const newUser: UserProfile = {
-    uid: 'USR' + Date.now(),
+    uid: 'USR' + Math.random().toString(36).substr(2, 9).toUpperCase(),
     email: email.toLowerCase(),
     displayName: name,
     mobile: mobile,
@@ -72,7 +77,7 @@ export const signupUser = async (name: string, email: string, pass: string, mobi
 
   users.push({ ...newUser, password: pass });
   saveToStorage(DB_KEYS.USERS, users);
-  saveToStorage(DB_KEYS.SESSION, newUser.uid);
+  localStorage.setItem(DB_KEYS.SESSION, newUser.uid);
   
   authListeners.forEach(cb => cb(newUser));
   return newUser;
@@ -81,14 +86,14 @@ export const signupUser = async (name: string, email: string, pass: string, mobi
 export const loginUser = async (email: string, pass: string): Promise<UserProfile> => {
   await new Promise(r => setTimeout(r, 800));
   const users = getFromStorage(DB_KEYS.USERS) || [];
-  const found = users.find((u: any) => u.email === email.toLowerCase() && u.password === pass);
+  const found = users.find((u: any) => u.email.toLowerCase() === email.toLowerCase() && u.password === pass);
 
   if (!found) {
     throw { code: 'auth/invalid-credential', message: 'ईमेल या पासवर्ड गलत है' };
   }
 
   const { password, ...userData } = found;
-  saveToStorage(DB_KEYS.SESSION, userData.uid);
+  localStorage.setItem(DB_KEYS.SESSION, userData.uid);
   authListeners.forEach(cb => cb(userData));
   return userData as UserProfile;
 };
@@ -100,7 +105,6 @@ export const logoutUser = async () => {
 
 // --- MOCK FIRESTORE ---
 export const db = {};
-
 export const doc = (db: any, collection: string, id: string) => ({ collection, id });
 
 const docListeners: Record<string, ((snap: any) => void)[]> = {};
@@ -110,14 +114,13 @@ export const onSnapshot = (docRef: any, callback: (snap: any) => void) => {
   if (!docListeners[path]) docListeners[path] = [];
   docListeners[path].push(callback);
 
-  // Initial trigger
-  const users = getFromStorage(DB_KEYS.USERS) || [];
-  const user = users.find((u: any) => u.uid === docRef.id);
-  callback({ 
-    exists: () => !!user, 
-    data: () => user 
-  });
+  const trigger = () => {
+    const users = getFromStorage(DB_KEYS.USERS) || [];
+    const user = users.find((u: any) => u.uid === docRef.id);
+    callback({ exists: () => !!user, data: () => user });
+  };
 
+  trigger();
   return () => {
     docListeners[path] = docListeners[path].filter(cb => cb !== callback);
   };
@@ -128,10 +131,7 @@ const notifyDocChange = (uid: string) => {
   const users = getFromStorage(DB_KEYS.USERS) || [];
   const user = users.find((u: any) => u.uid === uid);
   if (docListeners[path]) {
-    docListeners[path].forEach(cb => cb({ 
-      exists: () => !!user, 
-      data: () => user 
-    }));
+    docListeners[path].forEach(cb => cb({ exists: () => !!user, data: () => user }));
   }
 };
 
@@ -203,25 +203,15 @@ export const processSecurePayment = async (amt: number) => {
   return true;
 };
 
-// Mock collection/query for Wallet History
 export const collection = (db: any, ...path: string[]) => ({ path });
-export const query = (...args: any[]) => args[0];
-export const orderBy = (...args: any[]) => ({});
-export const limit = (...args: any[]) => ({});
-
 export const onSnapshotCollection = (collectionRef: any, callback: (snap: any) => void) => {
-  const uid = collectionRef.path[1]; // users/UID/history
+  const uid = collectionRef.path[1];
   const historyKey = DB_KEYS.HISTORY + uid;
-  
   const trigger = () => {
     const data = getFromStorage(historyKey) || [];
-    callback({
-      docs: data.map((d: any) => ({ data: () => d }))
-    });
+    callback({ docs: data.map((d: any) => ({ data: () => d })) });
   };
-
   trigger();
-  // Simple polling for mock updates
-  const interval = setInterval(trigger, 2000);
+  const interval = setInterval(trigger, 3000);
   return () => clearInterval(interval);
 };
