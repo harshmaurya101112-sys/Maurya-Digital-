@@ -23,26 +23,36 @@ const App: React.FC = () => {
   }, [currentPage]);
 
   useEffect(() => {
-    // Persistent listener
-    const unsub = onAuthStateChanged(auth, (fbUser) => {
+    let unsubSnapshot: (() => void) | null = null;
+
+    const unsubAuth = onAuthStateChanged(auth, (fbUser) => {
+      // Clean up previous snapshot listener if it exists
+      if (unsubSnapshot) {
+        unsubSnapshot();
+        unsubSnapshot = null;
+      }
+
       if (fbUser) {
-        // Listener for real-time profile updates
-        const unsubDoc = onSnapshot(doc(db, "users", fbUser.uid), (snap) => {
+        // Set up real-time listener for the authenticated user
+        unsubSnapshot = onSnapshot(doc(db, "users", fbUser.uid), (snap) => {
           if (snap.exists()) {
             setUser(snap.data() as UserProfile);
           } else {
-            // Edge case: user exists in auth but not in DB
+            // Fallback if data not found in DB but exists in auth
             setUser(fbUser);
           }
           setLoading(false);
         });
-        return () => unsubDoc();
       } else {
         setUser(null);
         setLoading(false);
       }
     });
-    return () => unsub();
+
+    return () => {
+      unsubAuth();
+      if (unsubSnapshot) unsubSnapshot();
+    };
   }, []);
 
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
@@ -79,6 +89,7 @@ const App: React.FC = () => {
     </div>
   );
 
+  // If no user, show AuthPage. App will automatically switch when auth state changes.
   if (!user) return <AuthPage onAuthSuccess={() => setCurrentPage('dashboard')} />;
 
   return (

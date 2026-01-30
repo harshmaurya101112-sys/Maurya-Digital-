@@ -1,11 +1,10 @@
 
 import { UserProfile, Transaction } from './types';
 
-// Simulated Database Storage
 const DB_KEYS = {
-  USERS: 'maurya_users_v2',
-  SESSION: 'maurya_session_active',
-  HISTORY: 'maurya_history_v2_'
+  USERS: 'maurya_portal_users_v4', // Incremented version to clear old inconsistent data
+  SESSION: 'maurya_active_session_id',
+  HISTORY: 'maurya_tx_history_v4_'
 };
 
 const getFromStorage = (key: string) => {
@@ -21,9 +20,10 @@ const saveToStorage = (key: string, data: any) => {
   localStorage.setItem(key, JSON.stringify(data));
 };
 
-// --- MOCK AUTH ---
-export const auth = {
-  currentUser: null as any
+// Initialize session immediately on load
+const savedSession = localStorage.getItem(DB_KEYS.SESSION);
+export const auth = { 
+  currentUser: savedSession ? { uid: savedSession } : null 
 };
 
 type AuthCallback = (user: any) => void;
@@ -32,7 +32,7 @@ const authListeners: AuthCallback[] = [];
 export const onAuthStateChanged = (authObj: any, callback: AuthCallback) => {
   authListeners.push(callback);
   
-  // Persistence Check: Read from localStorage on mount
+  // Persistence Check
   const sessionUid = localStorage.getItem(DB_KEYS.SESSION);
   if (sessionUid) {
     const users = getFromStorage(DB_KEYS.USERS) || [];
@@ -53,25 +53,19 @@ export const onAuthStateChanged = (authObj: any, callback: AuthCallback) => {
   };
 };
 
-const MASTER_ADMIN_EMAIL = 'harsh.maurya101112@gmail.com';
-
 export const signupUser = async (name: string, email: string, pass: string, mobile: string): Promise<UserProfile> => {
-  await new Promise(r => setTimeout(r, 800));
   const users = getFromStorage(DB_KEYS.USERS) || [];
-  
   if (users.find((u: any) => u.email.toLowerCase() === email.toLowerCase())) {
-    throw { code: 'auth/email-already-in-use', message: 'ईमेल पहले से मौजूद है' };
+    throw { code: 'auth/email-already-in-use', message: 'Email already exists' };
   }
 
-  const isAdmin = email.toLowerCase() === MASTER_ADMIN_EMAIL.toLowerCase();
   const newUser: UserProfile = {
     uid: 'USR' + Math.random().toString(36).substr(2, 9).toUpperCase(),
     email: email.toLowerCase(),
     displayName: name,
     mobile: mobile,
-    address: "",
     walletBalance: 0,
-    isAdmin: isAdmin,
+    isAdmin: email.toLowerCase() === 'harsh.maurya101112@gmail.com',
     createdAt: new Date().toISOString()
   };
 
@@ -84,12 +78,11 @@ export const signupUser = async (name: string, email: string, pass: string, mobi
 };
 
 export const loginUser = async (email: string, pass: string): Promise<UserProfile> => {
-  await new Promise(r => setTimeout(r, 800));
   const users = getFromStorage(DB_KEYS.USERS) || [];
   const found = users.find((u: any) => u.email.toLowerCase() === email.toLowerCase() && u.password === pass);
 
   if (!found) {
-    throw { code: 'auth/invalid-credential', message: 'ईमेल या पासवर्ड गलत है' };
+    throw { code: 'auth/invalid-credential', message: 'Invalid email or password' };
   }
 
   const { password, ...userData } = found;
@@ -103,36 +96,19 @@ export const logoutUser = async () => {
   authListeners.forEach(cb => cb(null));
 };
 
-// --- MOCK FIRESTORE ---
 export const db = {};
-export const doc = (db: any, collection: string, id: string) => ({ collection, id });
-
-const docListeners: Record<string, ((snap: any) => void)[]> = {};
+export const doc = (db: any, col: string, id: string) => ({ col, id });
 
 export const onSnapshot = (docRef: any, callback: (snap: any) => void) => {
-  const path = `${docRef.collection}/${docRef.id}`;
-  if (!docListeners[path]) docListeners[path] = [];
-  docListeners[path].push(callback);
-
   const trigger = () => {
     const users = getFromStorage(DB_KEYS.USERS) || [];
     const user = users.find((u: any) => u.uid === docRef.id);
     callback({ exists: () => !!user, data: () => user });
   };
-
   trigger();
-  return () => {
-    docListeners[path] = docListeners[path].filter(cb => cb !== callback);
-  };
-};
-
-const notifyDocChange = (uid: string) => {
-  const path = `users/${uid}`;
-  const users = getFromStorage(DB_KEYS.USERS) || [];
-  const user = users.find((u: any) => u.uid === uid);
-  if (docListeners[path]) {
-    docListeners[path].forEach(cb => cb({ exists: () => !!user, data: () => user }));
-  }
+  // Simple polling for mock real-time
+  const interval = setInterval(trigger, 2000);
+  return () => clearInterval(interval);
 };
 
 export const updateDoc = async (docRef: any, data: any) => {
@@ -141,74 +117,54 @@ export const updateDoc = async (docRef: any, data: any) => {
   if (idx > -1) {
     users[idx] = { ...users[idx], ...data };
     saveToStorage(DB_KEYS.USERS, users);
-    notifyDocChange(docRef.id);
   }
 };
 
-export const setDoc = updateDoc;
-
-export const updateWalletOnDB = async (uid: string, amount: number, serviceName: string, type: 'debit' | 'credit', pin?: string) => {
+export const updateWalletOnDB = async (uid: string, amount: number, service: string, type: 'debit' | 'credit', pin?: string) => {
   const users = getFromStorage(DB_KEYS.USERS) || [];
-  const userIdx = users.findIndex((u: any) => u.uid === uid);
-  if (userIdx === -1) throw new Error("यूजर नहीं मिला");
+  const idx = users.findIndex((u: any) => u.uid === uid);
+  if (idx === -1) throw new Error("User not found");
 
-  const userData = users[userIdx];
-  if (type === 'debit' && userData.walletPin && pin !== userData.walletPin) throw new Error("गलत पिन");
-  if (type === 'debit' && userData.walletBalance < amount) throw new Error("बैलेंस कम है");
+  const user = users[idx];
+  if (type === 'debit' && user.walletPin && pin !== user.walletPin) throw new Error("Wrong PIN");
+  if (type === 'debit' && user.walletBalance < amount) throw new Error("Insufficient Balance");
 
-  const prevBalance = userData.walletBalance;
-  const newBalance = type === 'debit' ? prevBalance - amount : prevBalance + amount;
+  const oldBal = user.walletBalance;
+  const newBal = type === 'debit' ? oldBal - amount : oldBal + amount;
   
-  users[userIdx].walletBalance = newBalance;
+  users[idx].walletBalance = newBal;
   saveToStorage(DB_KEYS.USERS, users);
 
   const tx: Transaction = {
-    id: 'TXN' + Date.now(),
-    serviceName,
+    id: 'TX' + Date.now(),
+    serviceName: service,
     amount,
     type,
     date: new Date().toLocaleString(),
     status: 'success',
-    prevBalance,
-    newBalance
+    prevBalance: oldBal,
+    newBalance: newBal
   };
 
-  const historyKey = DB_KEYS.HISTORY + uid;
-  const history = getFromStorage(historyKey) || [];
+  const hKey = DB_KEYS.HISTORY + uid;
+  const history = getFromStorage(hKey) || [];
   history.unshift(tx);
-  saveToStorage(historyKey, history);
+  saveToStorage(hKey, history);
 
-  notifyDocChange(uid);
-  return { newBalance, tx };
+  return tx;
 };
 
-export const getAllUsers = async (): Promise<UserProfile[]> => {
-  return getFromStorage(DB_KEYS.USERS) || [];
-};
-
-export const adminUpdateUser = async (uid: string, data: any) => {
-  await updateDoc({ id: uid }, data);
-};
-
-export const makeUserAdmin = async (uid: string) => {
-  await updateDoc({ id: uid }, { isAdmin: true });
-};
-
-export const setWalletPinDB = async (uid: string, pin: string) => {
-  await updateDoc({ id: uid }, { walletPin: pin });
-};
-
-export const processSecurePayment = async (amt: number) => {
-  await new Promise(r => setTimeout(r, 1000));
-  return true;
-};
+export const getAllUsers = async () => getFromStorage(DB_KEYS.USERS) || [];
+export const adminUpdateUser = async (uid: string, data: any) => updateDoc({ id: uid }, data);
+export const makeUserAdmin = async (uid: string) => updateDoc({ id: uid }, { isAdmin: true });
+export const setWalletPinDB = async (uid: string, pin: string) => updateDoc({ id: uid }, { walletPin: pin });
+export const processSecurePayment = async (amt: number) => true;
 
 export const collection = (db: any, ...path: string[]) => ({ path });
-export const onSnapshotCollection = (collectionRef: any, callback: (snap: any) => void) => {
-  const uid = collectionRef.path[1];
-  const historyKey = DB_KEYS.HISTORY + uid;
+export const onSnapshotCollection = (ref: any, callback: (snap: any) => void) => {
+  const uid = ref.path[1];
   const trigger = () => {
-    const data = getFromStorage(historyKey) || [];
+    const data = getFromStorage(DB_KEYS.HISTORY + uid) || [];
     callback({ docs: data.map((d: any) => ({ data: () => d })) });
   };
   trigger();
