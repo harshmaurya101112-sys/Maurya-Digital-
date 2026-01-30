@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { UserProfile } from '../types';
 import { Search, CreditCard, Landmark, Smartphone, FileText, Zap, ChevronRight, Lock } from 'lucide-react';
@@ -69,7 +68,8 @@ const ServicesPage: React.FC<{user: UserProfile, onAction: (amt: number, service
             className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all group text-left"
           >
             <div className="bg-blue-50 text-blue-600 p-5 rounded-3xl w-fit mb-6 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-              {React.cloneElement(service.icon as React.ReactElement, { size: 28 })}
+              {/* Fix: Cast to React.ReactElement<any> to resolve TypeScript error with 'size' prop in cloneElement */}
+              {React.cloneElement(service.icon as React.ReactElement<any>, { size: 28 })}
             </div>
             <h3 className="font-black text-slate-900 text-sm mb-1 uppercase leading-tight">{service.name}</h3>
             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-4">{service.category}</p>

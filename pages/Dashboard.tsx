@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { UserProfile } from '../types';
 import { CreditCard, ShieldCheck, FileText, Smartphone, Users, Zap, ArrowRight, Wallet } from 'lucide-react';
@@ -51,7 +50,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onPageChange }) => {
           (!act.adminOnly || user.isAdmin) && (
             <button key={i} onClick={() => onPageChange(act.page)} className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 flex flex-col items-center gap-5 group text-left w-full">
               <div className={`${act.color} text-white p-5 rounded-[1.5rem] shadow-2xl group-hover:rotate-6 transition-transform group-hover:scale-110`}>
-                {React.cloneElement(act.icon as React.ReactElement, { size: 28 })}
+                {/* Fix: Cast to React.ReactElement<any> to resolve TypeScript error with 'size' prop in cloneElement */}
+                {React.cloneElement(act.icon as React.ReactElement<any>, { size: 28 })}
               </div>
               <div className="text-center">
                 <span className="block font-black text-slate-900 text-xs uppercase tracking-tight">{act.title}</span>
