@@ -1,8 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { auth, db, logoutUser, updateWalletOnDB } from './firebase';
-import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-import { doc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+import { auth, onAuthStateChanged, db, doc, onSnapshot, logoutUser, updateWalletOnDB } from './firebase';
 import { UserProfile } from './types';
 import AuthPage from './pages/Auth';
 import Dashboard from './pages/Dashboard';
@@ -27,13 +25,11 @@ const App: React.FC = () => {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (fbUser) => {
       if (fbUser) {
+        // Mock listener already returns data
         const unsubDoc = onSnapshot(doc(db, "users", fbUser.uid), (snap) => {
           if (snap.exists()) {
             setUser(snap.data() as UserProfile);
           }
-          setLoading(false);
-        }, (err) => {
-          console.error("Firestore Error:", err);
           setLoading(false);
         });
         return () => unsubDoc();
@@ -50,7 +46,7 @@ const App: React.FC = () => {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const handleWalletUpdate = async (amount: number, service: string, type: 'credit' | 'debit' = 'debit', pin?: string) => {
+  const handleWalletUpdate = async (amount: number, service: string, type: 'debit' | 'credit' = 'debit', pin?: string) => {
     if (!user) return;
     try {
       await updateWalletOnDB(user.uid, amount, service, type, pin);
