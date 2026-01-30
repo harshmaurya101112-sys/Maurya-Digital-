@@ -1,0 +1,8 @@
+{
+  "name": "Maurya Digital Portal ",
+  "description": "Professional Digital Services Portal with Role-Based Access Control and Firebase Realtime Database.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
