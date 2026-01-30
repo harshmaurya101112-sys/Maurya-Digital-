@@ -1,5 +1,5 @@
 {
-  "name": "Maurya Digital Seva Portal",
-  "description": "A professional Multi-User Digital Services portal with integrated wallet, individual user dashboards, and 200+ government and banking services.",
+  "name": "Maurya Portal Auth Fix",
+  "description": "A professional authentication system with persistent session management for Maurya Portal using React and Firebase principles.",
   "requestFramePermissions": []
 }
