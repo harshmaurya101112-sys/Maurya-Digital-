@@ -23,7 +23,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onPageChange }) => {
       <div className="bg-gradient-to-br from-blue-900 via-blue-950 to-slate-950 p-10 rounded-[3rem] text-white shadow-3xl relative overflow-hidden group">
         <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
           <div>
-            <p className="text-blue-400 font-bold uppercase tracking-[0.3em] text-[10px] mb-3">Welcome to Maurya Portal</p>
+            <p className="text-blue-400 font-bold uppercase tracking-[0.3em] text-[10px] mb-3">Welcome to Maurya Digital Portal</p>
             <h1 className="text-4xl font-black mb-2 uppercase tracking-tighter flex items-center gap-3">
               {user.displayName}
               {user.isAdmin && <span className="bg-orange-500 text-[10px] px-3 py-1 rounded-full border border-orange-400 shadow-lg">ADMIN</span>}
@@ -87,7 +87,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onPageChange }) => {
             </div>
             <div className="p-4 bg-white/10 rounded-2xl border border-white/5">
               <p className="text-[10px] font-black text-blue-300 uppercase mb-1">Admin Help</p>
-              <p className="text-xs font-medium">Contact WhatsApp: 91xxxxxxxxx for high balance requests.</p>
+              <p className="text-xs font-medium">Contact Email: harxxxxxxxxx@.com for high balance requests.</p>
             </div>
           </div>
           <div className="absolute bottom-0 right-0 w-32 h-32 bg-orange-500/10 rounded-full blur-[60px] translate-y-1/2 translate-x-1/2"></div>
