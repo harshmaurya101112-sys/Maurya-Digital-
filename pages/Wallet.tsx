@@ -2,21 +2,19 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, Transaction } from '../types';
 import { Wallet, Plus, ShieldCheck, History, ArrowUpRight, ArrowDownLeft, Loader2, CheckCircle } from 'lucide-react';
-import { updateWalletOnDB, processSecurePayment, setWalletPinDB, db } from '../firebase';
-import { collection, query, orderBy, limit, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+import { updateWalletOnDB, processSecurePayment, setWalletPinDB, db, collection, onSnapshotCollection } from '../firebase';
 
 const WalletPage: React.FC<{user: UserProfile}> = ({ user }) => {
   const [history, setHistory] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(false);
   const [amount, setAmount] = useState('');
-  const [pinInput, setPinInput] = useState('');
   const [showPinDialog, setShowPinDialog] = useState(false);
   const [newPin, setNewPin] = useState('');
 
   useEffect(() => {
-    const q = query(collection(db, "users", user.uid, "history"), orderBy("date", "desc"), limit(10));
-    const unsub = onSnapshot(q, (snap) => {
-      const txs = snap.docs.map(d => d.data() as Transaction);
+    // Using mock collection listener
+    const unsub = onSnapshotCollection(collection(db, "users", user.uid, "history"), (snap: any) => {
+      const txs = snap.docs.map((d: any) => d.data() as Transaction);
       setHistory(txs);
     });
     return () => unsub();

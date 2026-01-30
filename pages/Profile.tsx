@@ -2,8 +2,7 @@
 import React, { useState } from 'react';
 import { UserProfile } from '../types';
 import { User, MapPin, Phone, Mail, Save, Edit2 } from 'lucide-react';
-import { doc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
-import { db } from '../firebase';
+import { db, doc, updateDoc } from '../firebase';
 
 const ProfilePage: React.FC<{user: UserProfile, onNotify: (m: string) => void}> = ({ user, onNotify }) => {
   const [editing, setEditing] = useState(false);
