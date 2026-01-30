@@ -39,10 +39,10 @@ const ServicesPage: React.FC<{user: UserProfile, onAction: (amt: number, service
   const allServices = useMemo(() => {
     const list: ServiceItem[] = [
       // IDENTITY & REGISTRATION (25)
-      { id: 'uidai_1', name: 'Aadhar Update', icon: <Fingerprint />, category: 'Identity', url: 'https://myaadhaar.uidai.gov.in/', brandColor: 'bg-[#da251d]', desc: 'UIDAI Address/Mobile Update' },
+      { id: 'uidai_1', name: 'Aadhar Dashboard', icon: <Fingerprint />, category: 'Identity', url: 'https://myaadhaar.uidai.gov.in/', brandColor: 'bg-[#da251d]', desc: 'UIDAI Address/Mobile Update' },
       { id: 'uidai_2', name: 'Aadhar Download', icon: <Fingerprint />, category: 'Identity', url: 'https://myaadhaar.uidai.gov.in/genricDownloadAadhaar', brandColor: 'bg-[#da251d]', desc: 'E-Aadhar PDF Download' },
-      { id: 'pan_nsdl', name: 'PAN New (NSDL)', icon: <User />, category: 'Identity', url: 'https://www.onlineservices.nsdl.com/paam/endUserRegisterContact.html', brandColor: 'bg-[#004a95]', desc: 'Apply New PAN Card' },
-      { id: 'pan_uti', name: 'PAN Correction (UTI)', icon: <User />, category: 'Identity', url: 'https://www.utiitsl.com/pan/', brandColor: 'bg-[#f47920]', desc: 'UTIITSL PAN Services' },
+      { id: 'pan_nsdl', name: 'PAN service (NSDL)', icon: <User />, category: 'Identity', url: 'https://www.onlineservices.nsdl.com/paam/endUserRegisterContact.html', brandColor: 'bg-[#004a95]', desc: 'Apply New PAN Card' },
+      { id: 'pan_uti', name: 'PAN service (UTI)', icon: <User />, category: 'Identity', url: 'https://www.pan.utiitsl.com/', brandColor: 'bg-[#f47920]', desc: 'UTIITSL PAN Services' },
       { id: 'voter_new', name: 'Voter Registration', icon: <ShieldCheck />, category: 'Identity', url: 'https://voters.eci.gov.in/', brandColor: 'bg-[#218d4e]', desc: 'New Voter ID Form 6' },
       { id: 'voter_corr', name: 'Voter Correction', icon: <ShieldCheck />, category: 'Identity', url: 'https://voters.eci.gov.in/', brandColor: 'bg-[#218d4e]', desc: 'Voter ID Card Update' },
       { id: 'passport', name: 'Passport Seva', icon: <Globe />, category: 'Identity', url: 'https://www.passportindia.gov.in/', brandColor: 'bg-[#002d62]', desc: 'Fresh/Re-issue Passport' },
@@ -77,7 +77,7 @@ const ServicesPage: React.FC<{user: UserProfile, onAction: (amt: number, service
       { id: 'rbl_nb', name: 'RBL Bank', icon: <BankIcon />, category: 'Banking', url: 'https://www.rblbank.com/', brandColor: 'bg-[#005ba4]', desc: 'RBL Online' },
       { id: 'paytm_nb', name: 'Paytm Bank', icon: <Smartphone />, category: 'Banking', url: 'https://www.paytmbank.com/', brandColor: 'bg-[#00b9f1]', desc: 'Paytm Payments' },
       { id: 'airtel_nb', name: 'Airtel Bank', icon: <Smartphone />, category: 'Banking', url: 'https://www.airtel.in/bank/', brandColor: 'bg-[#ff0000]', desc: 'Airtel Money' },
-      { id: 'gst_portal', name: 'GST Login', icon: <CreditCard />, category: 'Banking', url: 'https://www.gst.gov.in/', brandColor: 'bg-[#244999]', desc: 'GST Returns/Reg' },
+      { id: 'gst_portal', name: 'GST Service', icon: <CreditCard />, category: 'Banking', url: 'https://www.gst.gov.in/', brandColor: 'bg-[#244999]', desc: 'GST Returns/Reg' },
       { id: 'itr_portal', name: 'Income Tax', icon: <Receipt />, category: 'Banking', url: 'https://www.incometax.gov.in/', brandColor: 'bg-[#2b3990]', desc: 'ITR Filing Portal' },
 
       // STATE PORTALS (80+)
