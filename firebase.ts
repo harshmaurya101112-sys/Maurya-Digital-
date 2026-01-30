@@ -32,7 +32,7 @@ const authListeners: AuthCallback[] = [];
 export const onAuthStateChanged = (authObj: any, callback: AuthCallback) => {
   authListeners.push(callback);
   
-  // Persistence Check: Always check storage immediately
+  // Persistence Check: Read from localStorage on mount
   const sessionUid = localStorage.getItem(DB_KEYS.SESSION);
   if (sessionUid) {
     const users = getFromStorage(DB_KEYS.USERS) || [];
