@@ -26,7 +26,6 @@ const App: React.FC = () => {
   useEffect(() => {
     let unsubSnapshot: (() => void) | null = null;
 
-    // This listener is crucial for persistence on refresh
     const unsubAuth = onAuthStateChangedListener((fbUser) => {
       if (unsubSnapshot) {
         unsubSnapshot();
@@ -35,13 +34,12 @@ const App: React.FC = () => {
       
       if (fbUser) {
         setIsEmailVerified(fbUser.emailVerified);
-        // Real-time Firestore sync
         unsubSnapshot = onSnapshot(doc(db, "users", fbUser.uid), 
           (snap) => {
             if (snap.exists()) {
               setUser(snap.data() as UserProfile);
             } else {
-              // Fallback during signup processing
+              // Only sets temporary user if Firestore doc hasn't been created yet (during signup)
               setUser({
                 uid: fbUser.uid,
                 email: fbUser.email || '',
@@ -51,16 +49,14 @@ const App: React.FC = () => {
                 createdAt: new Date().toISOString()
               });
             }
-            // CRITICAL: Set loading false ONLY after we checked the user
             setLoading(false);
           },
           (error) => {
-            console.error("Sync error:", error);
+            console.error("Firestore sync error:", error);
             setLoading(false);
           }
         );
       } else {
-        // No user found, go to Auth
         setUser(null);
         setIsEmailVerified(false);
         setLoading(false);
@@ -105,31 +101,16 @@ const App: React.FC = () => {
     }
   };
 
-  // High-end Security Loading Screen for persistence check
   if (loading) return (
-    <div className="h-screen bg-[#020617] flex flex-col items-center justify-center text-white font-sans overflow-hidden">
+    <div className="h-screen bg-[#020617] flex flex-col items-center justify-center text-white overflow-hidden">
       <div className="relative">
         <div className="w-48 h-48 border-4 border-blue-500/10 rounded-full"></div>
         <div className="absolute inset-0 w-48 h-48 border-t-4 border-blue-600 rounded-full animate-spin"></div>
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="bg-blue-600/10 p-8 rounded-[2.5rem] backdrop-blur-xl border border-white/5 shadow-2xl">
-            <ShieldCheck size={56} className="text-blue-500 animate-pulse" />
-          </div>
+          <ShieldCheck size={56} className="text-blue-500 animate-pulse" />
         </div>
       </div>
-      <div className="mt-16 text-center space-y-6">
-        <h1 className="text-4xl font-black uppercase tracking-[0.3em] text-white">Maurya Portal</h1>
-        <div className="flex items-center justify-center gap-4">
-          <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-          <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-          <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce"></div>
-        </div>
-        <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.6em] mt-10">Authenticating Secure Session...</p>
-      </div>
-      <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-20 overflow-hidden">
-        <div className="absolute top-[-10%] left-[-10%] w-[600px] h-[600px] bg-blue-700 rounded-full blur-[180px]"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-orange-700 rounded-full blur-[180px]"></div>
-      </div>
+      <p className="mt-10 text-[10px] font-black uppercase tracking-[0.6em] text-slate-500">Restoring Secure Session...</p>
     </div>
   );
 
@@ -144,7 +125,7 @@ const App: React.FC = () => {
           </div>
           <h2 className="text-4xl font-black text-blue-950 uppercase mb-6 tracking-tighter">Check Email</h2>
           <p className="text-slate-400 font-bold mb-12 text-sm leading-relaxed">
-            हमने <span className="text-blue-600">{user.email}</span> पर लिंक भेजा है।
+            हमने <span className="text-blue-600">{user.email}</span> पर लिंक भेजा है। कृपया अपना इनबॉक्स चेक करें।
           </p>
           <div className="space-y-4">
             <button onClick={checkVerification} className="w-full bg-blue-950 text-white py-6 rounded-[2rem] font-black uppercase text-xs flex items-center justify-center gap-4 shadow-3xl hover:bg-black transition-all">
