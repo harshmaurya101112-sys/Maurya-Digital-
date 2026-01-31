@@ -39,6 +39,7 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
+// Persist login state
 setPersistence(auth, browserLocalPersistence).catch(console.error);
 
 export const onAuthStateChangedListener = (callback: (user: any) => void) => {
@@ -58,7 +59,7 @@ export const signupUser = async (name: string, email: string, pass: string, mobi
   try {
     await sendEmailVerification(user);
   } catch (e) {
-    console.error("Verification email failed instantly", e);
+    console.error("Verification email failed", e);
   }
 
   const profile: UserProfile = {
@@ -78,7 +79,7 @@ export const signupUser = async (name: string, email: string, pass: string, mobi
 export const loginUser = async (email: string, pass: string) => {
   const userCredential = await signInWithEmailAndPassword(auth, email, pass);
   const userDoc = await getDoc(doc(db, "users", userCredential.user.uid));
-  if (!userDoc.exists()) throw new Error("User record not found in Firestore.");
+  if (!userDoc.exists()) throw new Error("User profile not found in database.");
   return userDoc.data() as UserProfile;
 };
 
@@ -86,18 +87,12 @@ export const logoutUser = async () => {
   await signOut(auth);
 };
 
-/**
- * Mock function to process secure payments.
- * @param amount The amount to process.
- * @returns A promise that resolves to true if successful.
- */
 export const processSecurePayment = async (amount: number) => {
-  // Simulate a payment processing delay
-  await new Promise(resolve => setTimeout(resolve, 2000));
+  await new Promise(resolve => setTimeout(resolve, 1500));
   return true;
 };
 
-// Explicit exports to satisfy Vite build and other components
+// Export Firestore methods explicitly for build compatibility
 export { 
   doc, 
   onSnapshot, 
