@@ -25,31 +25,29 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { UserProfile, Transaction } from './types';
 
-/**
- * CONFIGURATION GUIDE:
- * 1. Go to Vercel Dashboard -> Settings -> Environment Variables.
- * 2. Key: API_KEY
- * 3. Value: [Paste your Firebase Web API Key here]
- */
+// SECURITY: Using process.env.API_KEY to prevent leakage.
+// Make sure to add 'API_KEY' in your Vercel Environment Variables.
 const firebaseConfig = {
-  // Use the exact environment variable name provided by the platform
-  apiKey: process.env.API_KEY || "AIzaSy_YOUR_FALLBACK_KEY_IF_NEEDED", 
+  apiKey: process.env.API_KEY, 
   authDomain: "maurya-portal.firebaseapp.com",
   projectId: "maurya-portal",
   storageBucket: "maurya-portal.appspot.com",
-  messagingSenderId: "789456123",
-  appId: "1:789456123:web:abc123def"
+  messagingSenderId: "789456123000",
+  appId: "1:789456123000:web:abcdef123456"
 };
 
-// Initialize Firebase App
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
-// Force Browser to remember the login session even after page refresh
+/**
+ * PERSISTENCE SETTING:
+ * This ensures that when the page is refreshed, Firebase checks the saved session.
+ */
 setPersistence(auth, browserLocalPersistence)
-  .then(() => console.debug("Auth persistence enabled: Local"))
-  .catch(err => console.error("Persistence Error:", err));
+  .then(() => console.debug("Auth persistence: ACTIVE"))
+  .catch((err) => console.error("Persistence error:", err));
 
 export const onAuthStateChangedListener = (callback: (user: any) => void) => {
   return onAuthStateChanged(auth, callback);
@@ -77,7 +75,7 @@ export const signupUser = async (name: string, email: string, pass: string, mobi
 export const loginUser = async (email: string, pass: string) => {
   const userCredential = await signInWithEmailAndPassword(auth, email, pass);
   const userDoc = await getDoc(doc(db, "users", userCredential.user.uid));
-  if (!userDoc.exists()) throw new Error("User record missing in Database.");
+  if (!userDoc.exists()) throw new Error("Database profile not found.");
   return userDoc.data() as UserProfile;
 };
 
