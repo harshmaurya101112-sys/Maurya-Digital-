@@ -1,4 +1,3 @@
-
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { 
   getAuth, 
@@ -25,23 +24,22 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { UserProfile, Transaction } from './types';
 
+// Using the exact config format provided by the user for Vite environment
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID
+  apiKey: (import.meta as any).env.VITE_FIREBASE_API_KEY,
+  authDomain: (import.meta as any).env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: (import.meta as any).env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: (import.meta as any).env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: (import.meta as any).env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: (import.meta as any).env.VITE_FIREBASE_APP_ID
 };
-
-export default firebaseConfig;
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
-setPersistence(auth, browserLocalPersistence)
-  .catch((err) => console.error("Firebase Persistence Error:", err));
+// Enforce Session Persistence to stay logged in after refresh
+setPersistence(auth, browserLocalPersistence).catch(console.error);
 
 export const onAuthStateChangedListener = (callback: (user: any) => void) => {
   return onAuthStateChanged(auth, callback);
@@ -56,6 +54,8 @@ export const resendVerification = async () => {
 export const signupUser = async (name: string, email: string, pass: string, mobile: string) => {
   const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
   const user = userCredential.user;
+  
+  // Send verification email immediately on signup
   await sendEmailVerification(user);
 
   const profile: UserProfile = {
@@ -85,19 +85,6 @@ export const logoutUser = async () => {
 
 export { doc, onSnapshot, updateDoc, collection };
 
-export const processSecurePayment = async (amount: number) => {
-  await new Promise(resolve => setTimeout(resolve, 2000));
-  return true;
-};
-
-export const setWalletPinDB = async (uid: string, pin: string) => {
-  await updateDoc(doc(db, "users", uid), { walletPin: pin });
-};
-
-export const onSnapshotCollection = (ref: any, callback: any) => {
-  return onSnapshot(ref, callback);
-};
-
 export const updateWalletOnDB = async (uid: string, amount: number, service: string, type: 'debit' | 'credit', pin?: string) => {
   const userRef = doc(db, "users", uid);
   const userSnap = await getDoc(userRef);
@@ -125,6 +112,10 @@ export const updateWalletOnDB = async (uid: string, amount: number, service: str
   return tx;
 };
 
+export const setWalletPinDB = async (uid: string, pin: string) => {
+  await updateDoc(doc(db, "users", uid), { walletPin: pin });
+};
+
 export const getAllUsers = async () => {
   const q = query(collection(db, "users"));
   const snap = await getDocs(q);
@@ -142,3 +133,12 @@ export const adminUpdateUser = async (uid: string, data: any) => {
 export const makeUserAdmin = async (uid: string) => {
   await updateDoc(doc(db, "users", uid), { isAdmin: true });
 };
+
+export const processSecurePayment = async (amount: number) => {
+  await new Promise(resolve => setTimeout(resolve, 2000));
+  return true;
+};
+
+export const onSnapshotCollection = (ref: any, callback: any) => {
+  return onSnapshot(ref, callback);
+}
