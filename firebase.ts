@@ -28,13 +28,15 @@ import { UserProfile, Transaction } from './types';
 // SECURITY: Using process.env.API_KEY to prevent leakage.
 // Make sure to add 'API_KEY' in your Vercel Environment Variables.
 const firebaseConfig = {
-  apiKey: process.env.API_KEY, 
-  authDomain: "maurya-portal.firebaseapp.com",
-  projectId: "maurya-portal",
-  storageBucket: "maurya-portal.appspot.com",
-  messagingSenderId: "789456123000",
-  appId: "1:789456123000:web:abcdef123456"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
+
+export default firebaseConfig;
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
