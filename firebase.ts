@@ -39,7 +39,6 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
-// Keep user logged in across refreshes
 setPersistence(auth, browserLocalPersistence).catch(console.error);
 
 export const onAuthStateChangedListener = (callback: (user: any) => void) => {
@@ -59,7 +58,7 @@ export const signupUser = async (name: string, email: string, pass: string, mobi
   try {
     await sendEmailVerification(user);
   } catch (e) {
-    console.error("Verification email failed", e);
+    console.error("Verification email failed instantly", e);
   }
 
   const profile: UserProfile = {
@@ -87,8 +86,32 @@ export const logoutUser = async () => {
   await signOut(auth);
 };
 
-// Re-exporting specifically to avoid build-time import errors
-export { doc, onSnapshot, updateDoc, collection, query, where, orderBy, getDoc, setDoc };
+/**
+ * Mock function to process secure payments.
+ * @param amount The amount to process.
+ * @returns A promise that resolves to true if successful.
+ */
+export const processSecurePayment = async (amount: number) => {
+  // Simulate a payment processing delay
+  await new Promise(resolve => setTimeout(resolve, 2000));
+  return true;
+};
+
+// Explicit exports to satisfy Vite build and other components
+export { 
+  doc, 
+  onSnapshot, 
+  updateDoc, 
+  collection, 
+  query, 
+  where, 
+  orderBy, 
+  getDoc, 
+  getDocs, 
+  setDoc, 
+  addDoc, 
+  deleteDoc 
+};
 
 export const updateWalletOnDB = async (uid: string, amount: number, service: string, type: 'debit' | 'credit', pin?: string) => {
   const userRef = doc(db, "users", uid);
@@ -121,29 +144,15 @@ export const setWalletPinDB = async (uid: string, pin: string) => {
   await updateDoc(doc(db, "users", uid), { walletPin: pin });
 };
 
-export const getAllUsers = async () => {
-  const q = query(collection(db, "users"));
-  const snap = await getDocs(q);
-  return snap.docs.map(d => d.data() as UserProfile);
-};
-
-export const deleteUserDB = async (uid: string) => {
-  await deleteDoc(doc(db, "users", uid));
-};
-
 export const adminUpdateUser = async (uid: string, data: any) => {
-  await updateDoc(doc(db, "users", uid), data);
+  const userRef = doc(db, "users", uid);
+  await updateDoc(userRef, data);
 };
 
 export const makeUserAdmin = async (uid: string) => {
   await updateDoc(doc(db, "users", uid), { isAdmin: true });
 };
 
-export const processSecurePayment = async (amount: number) => {
-  await new Promise(resolve => setTimeout(resolve, 2000));
-  return true;
-};
-
-export const onSnapshotCollection = (ref: any, callback: any) => {
-  return onSnapshot(ref, callback);
+export const deleteUserDB = async (uid: string) => {
+  await deleteDoc(doc(db, "users", uid));
 }
