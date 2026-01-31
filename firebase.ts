@@ -86,7 +86,8 @@ export const logoutUser = async () => {
   await signOut(auth);
 };
 
-export { doc, onSnapshot, updateDoc, collection };
+// Fix: Included 'query' in the export list to resolve module import errors in other components like Admin.tsx.
+export { doc, onSnapshot, updateDoc, collection, query };
 
 export const updateWalletOnDB = async (uid: string, amount: number, service: string, type: 'debit' | 'credit', pin?: string) => {
   const userRef = doc(db, "users", uid);
