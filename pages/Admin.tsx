@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
-import { getAllUsers, adminUpdateUser, makeUserAdmin, deleteUserDB } from '../firebase';
+import { db, collection, query, onSnapshot, adminUpdateUser, makeUserAdmin, deleteUserDB } from '../firebase';
 import { UserProfile } from '../types';
-import { Users, ShieldAlert, Search, ArrowRight, UserPlus, Edit, Trash2, X, Mail, Phone, User as UserIcon, MapPin, Wallet, Check } from 'lucide-react';
+import { Users, ShieldAlert, Search, ArrowRight, UserPlus, Edit, Trash2, X, Mail, Phone, User as UserIcon, MapPin, Wallet, Check, Loader2 } from 'lucide-react';
 
 const AdminPage: React.FC<{currentUser: UserProfile, onNotify: (m: string) => void}> = ({ currentUser, onNotify }) => {
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -10,40 +9,49 @@ const AdminPage: React.FC<{currentUser: UserProfile, onNotify: (m: string) => vo
   const [targetId, setTargetId] = useState('');
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [processing, setProcessing] = useState(false);
 
-  const refreshUsers = async () => {
-    const list = await getAllUsers();
-    setUsers(list);
-  };
-
-  useEffect(() => { refreshUsers(); }, []);
+  // Real-time user list sync
+  useEffect(() => {
+    const q = query(collection(db, "users"));
+    const unsub = onSnapshot(q, (snap) => {
+      const list = snap.docs.map(d => d.data() as UserProfile);
+      setUsers(list);
+    });
+    return () => unsub();
+  }, []);
 
   const handleGrantAdmin = async () => {
     if (!targetId) return;
+    setProcessing(true);
     try {
       await makeUserAdmin(targetId);
       onNotify("Admin status granted!");
       setTargetId('');
-      refreshUsers();
     } catch (e) {
       onNotify("Error: UID not found");
+    } finally {
+      setProcessing(false);
     }
   };
 
   const handleDeleteUser = async (uid: string) => {
+    setProcessing(true);
     try {
       await deleteUserDB(uid);
       onNotify("User deleted successfully");
       setShowDeleteConfirm(null);
-      refreshUsers();
     } catch (e) {
       onNotify("Delete failed");
+    } finally {
+      setProcessing(false);
     }
   };
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingUser) return;
+    setProcessing(true);
     try {
       await adminUpdateUser(editingUser.uid, {
         displayName: editingUser.displayName,
@@ -52,11 +60,12 @@ const AdminPage: React.FC<{currentUser: UserProfile, onNotify: (m: string) => vo
         address: editingUser.address,
         walletBalance: Number(editingUser.walletBalance)
       });
-      onNotify("User details updated successfully!");
+      onNotify("User info updated!");
       setEditingUser(null);
-      refreshUsers();
     } catch (e) {
       onNotify("Update failed");
+    } finally {
+      setProcessing(false);
     }
   };
 
@@ -87,9 +96,10 @@ const AdminPage: React.FC<{currentUser: UserProfile, onNotify: (m: string) => vo
               />
               <button 
                 onClick={handleGrantAdmin} 
-                className="w-full bg-blue-900 text-white py-4 rounded-2xl font-black text-[10px] uppercase flex items-center justify-center gap-2 hover:bg-black transition-all shadow-xl shadow-blue-900/10"
+                disabled={processing}
+                className="w-full bg-blue-900 text-white py-4 rounded-2xl font-black text-[10px] uppercase flex items-center justify-center gap-2 hover:bg-black transition-all shadow-xl disabled:opacity-50"
               >
-                Promote to Admin <ArrowRight size={14} />
+                {processing ? <Loader2 className="animate-spin" size={14} /> : <>Promote to Admin <ArrowRight size={14} /></>}
               </button>
             </div>
           </div>
@@ -98,7 +108,7 @@ const AdminPage: React.FC<{currentUser: UserProfile, onNotify: (m: string) => vo
             <p className="text-[10px] font-black uppercase mb-1 tracking-widest opacity-80">Total Retailers</p>
             <h2 className="text-5xl font-black">{users.length}</h2>
             <div className="mt-4 flex items-center gap-2 text-[10px] font-black uppercase bg-white/20 p-2 rounded-xl">
-              <UserPlus size={14} /> Registered Members
+              <UserPlus size={14} /> Real-time Sync Active
             </div>
           </div>
         </div>
@@ -181,37 +191,37 @@ const AdminPage: React.FC<{currentUser: UserProfile, onNotify: (m: string) => vo
             <button onClick={() => setEditingUser(null)} className="absolute top-10 right-10 p-3 bg-slate-50 rounded-2xl text-slate-400 hover:text-red-500">
               <X size={24} />
             </button>
-            <h2 className="text-3xl font-black text-blue-950 uppercase mb-8">Edit User Database</h2>
+            <h2 className="text-3xl font-black text-blue-950 uppercase mb-8">Edit User Profile</h2>
             
             <form onSubmit={handleUpdate} className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase ml-2 flex items-center gap-2"><UserIcon size={12}/> Full Name</label>
-                <input required className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-sm"
+                <input required className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:border-blue-500"
                   value={editingUser.displayName} onChange={e => setEditingUser({...editingUser, displayName: e.target.value})} />
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase ml-2 flex items-center gap-2"><Mail size={12}/> Email Address</label>
-                <input required type="email" className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-sm"
+                <input required type="email" className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:border-blue-500"
                   value={editingUser.email} onChange={e => setEditingUser({...editingUser, email: e.target.value})} />
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase ml-2 flex items-center gap-2"><Phone size={12}/> Mobile Number</label>
-                <input className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-sm"
+                <input className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:border-blue-500"
                   value={editingUser.mobile || ''} onChange={e => setEditingUser({...editingUser, mobile: e.target.value})} />
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase ml-2 flex items-center gap-2"><Wallet size={12}/> Wallet Balance (₹)</label>
-                <input type="number" className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-sm"
+                <input type="number" className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:border-blue-500"
                   value={editingUser.walletBalance} onChange={e => setEditingUser({...editingUser, walletBalance: Number(e.target.value)})} />
               </div>
               <div className="space-y-2 md:col-span-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase ml-2 flex items-center gap-2"><MapPin size={12}/> Service Address</label>
-                <textarea rows={2} className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-sm resize-none"
+                <textarea rows={2} className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-sm resize-none outline-none focus:border-blue-500"
                   value={editingUser.address || ''} onChange={e => setEditingUser({...editingUser, address: e.target.value})} />
               </div>
-              <div className="md:col-span-2 pt-6 flex gap-4">
-                <button type="submit" className="flex-1 py-5 bg-blue-900 text-white rounded-[2rem] font-black uppercase text-xs shadow-2xl flex items-center justify-center gap-2">
-                  <Check size={18} /> Update User Info
+              <div className="md:col-span-2 pt-6">
+                <button type="submit" disabled={processing} className="w-full py-5 bg-blue-900 text-white rounded-[2rem] font-black uppercase text-xs shadow-2xl flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50">
+                  {processing ? <Loader2 className="animate-spin" size={18} /> : <><Check size={18} /> Update User Database</>}
                 </button>
               </div>
             </form>
@@ -227,10 +237,12 @@ const AdminPage: React.FC<{currentUser: UserProfile, onNotify: (m: string) => vo
               <Trash2 size={40} />
             </div>
             <h2 className="text-2xl font-black text-slate-900 uppercase mb-4">Confirm Deletion</h2>
-            <p className="text-slate-500 font-bold mb-10 text-sm">Warning: This user and all their records will be permanently removed from the system. This cannot be undone.</p>
+            <p className="text-slate-500 font-bold mb-10 text-sm">Warning: This cannot be undone.</p>
             <div className="flex gap-4">
               <button onClick={() => setShowDeleteConfirm(null)} className="flex-1 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black uppercase text-[10px]">Cancel</button>
-              <button onClick={() => handleDeleteUser(showDeleteConfirm)} className="flex-1 py-4 bg-red-600 text-white rounded-2xl font-black uppercase text-[10px]">Delete Forever</button>
+              <button onClick={() => handleDeleteUser(showDeleteConfirm)} disabled={processing} className="flex-1 py-4 bg-red-600 text-white rounded-2xl font-black uppercase text-[10px] disabled:opacity-50">
+                {processing ? "Deleting..." : "Delete Forever"}
+              </button>
             </div>
           </div>
         </div>

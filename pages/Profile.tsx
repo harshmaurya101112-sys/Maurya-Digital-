@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserProfile } from '../types';
 import { User, MapPin, Phone, Mail, Save, Edit2, Loader2, ShieldCheck } from 'lucide-react';
 import { db, doc, updateDoc } from '../firebase';
@@ -14,19 +13,31 @@ const ProfilePage: React.FC<{user: UserProfile, onNotify: (m: string) => void}> 
     email: user.email 
   });
 
+  // Sync local form state if user data changes from Firestore
+  useEffect(() => {
+    setFormData({
+      name: user.displayName,
+      address: user.address || '',
+      mobile: user.mobile || '',
+      email: user.email
+    });
+  }, [user]);
+
   const handleSave = async () => {
     setSaving(true);
     try {
-      await updateDoc(doc(db, "users", user.uid), {
+      const userRef = doc(db, "users", user.uid);
+      await updateDoc(userRef, {
         displayName: formData.name,
         address: formData.address,
         mobile: formData.mobile,
         email: formData.email
       });
       setEditing(false);
-      onNotify("Profile updated successfully!");
+      onNotify("प्रोफ़ाइल अपडेट हो गई!");
     } catch (e: any) {
-      onNotify("Update failed: " + e.message);
+      console.error("Update Error:", e);
+      onNotify("अपडेट फेल: " + e.message);
     } finally {
       setSaving(false);
     }
@@ -59,7 +70,7 @@ const ProfilePage: React.FC<{user: UserProfile, onNotify: (m: string) => void}> 
               disabled={saving}
               className={`px-10 py-5 rounded-[2rem] text-[11px] font-black uppercase flex items-center gap-3 transition-all shadow-2xl ${
                 editing ? 'bg-emerald-600 text-white shadow-emerald-600/20' : 'bg-blue-950 text-white shadow-blue-950/20'
-              }`}
+              } active:scale-95`}
             >
               {saving ? <Loader2 size={18} className="animate-spin" /> : (editing ? <Save size={18} /> : <Edit2 size={18} />)}
               {saving ? 'Saving...' : (editing ? 'Confirm Changes' : 'Update Profile')}
@@ -72,8 +83,11 @@ const ProfilePage: React.FC<{user: UserProfile, onNotify: (m: string) => void}> 
                 <User size={14} /> Full Legal Name
               </label>
               {editing ? (
-                <input className="w-full p-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] font-bold text-sm outline-none focus:ring-4 focus:ring-blue-500/5 transition-all" 
-                  value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+                <input 
+                  className="w-full p-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] font-bold text-sm outline-none focus:ring-4 focus:ring-blue-500/5 transition-all" 
+                  value={formData.name} 
+                  onChange={e => setFormData({...formData, name: e.target.value})} 
+                />
               ) : (
                 <p className="font-black text-slate-800 bg-slate-50/50 p-5 rounded-[1.5rem] border border-transparent">{user.displayName}</p>
               )}
@@ -84,8 +98,11 @@ const ProfilePage: React.FC<{user: UserProfile, onNotify: (m: string) => void}> 
                 <Mail size={14} /> Email Address
               </label>
               {editing ? (
-                <input className="w-full p-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] font-bold text-sm outline-none focus:ring-4 focus:ring-blue-500/5 transition-all" 
-                  value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
+                <input 
+                  className="w-full p-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] font-bold text-sm outline-none focus:ring-4 focus:ring-blue-500/5 transition-all" 
+                  value={formData.email} 
+                  onChange={e => setFormData({...formData, email: e.target.value})} 
+                />
               ) : (
                 <p className="font-black text-slate-800 bg-slate-50/50 p-5 rounded-[1.5rem] border border-transparent">{user.email}</p>
               )}
@@ -96,8 +113,11 @@ const ProfilePage: React.FC<{user: UserProfile, onNotify: (m: string) => void}> 
                 <Phone size={14} /> Mobile Number
               </label>
               {editing ? (
-                <input className="w-full p-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] font-bold text-sm outline-none focus:ring-4 focus:ring-blue-500/5 transition-all" 
-                  value={formData.mobile} onChange={e => setFormData({...formData, mobile: e.target.value})} />
+                <input 
+                  className="w-full p-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] font-bold text-sm outline-none focus:ring-4 focus:ring-blue-500/5 transition-all" 
+                  value={formData.mobile} 
+                  onChange={e => setFormData({...formData, mobile: e.target.value})} 
+                />
               ) : (
                 <p className="font-black text-slate-800 bg-slate-50/50 p-5 rounded-[1.5rem] border border-transparent">{user.mobile || 'Not provided'}</p>
               )}
@@ -108,8 +128,12 @@ const ProfilePage: React.FC<{user: UserProfile, onNotify: (m: string) => void}> 
                 <MapPin size={14} /> Store Address
               </label>
               {editing ? (
-                <textarea rows={2} className="w-full p-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] font-bold text-sm outline-none focus:ring-4 focus:ring-blue-500/5 transition-all resize-none" 
-                  value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} />
+                <textarea 
+                  rows={2} 
+                  className="w-full p-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] font-bold text-sm outline-none focus:ring-4 focus:ring-blue-500/5 transition-all resize-none" 
+                  value={formData.address} 
+                  onChange={e => setFormData({...formData, address: e.target.value})} 
+                />
               ) : (
                 <p className="font-black text-slate-800 bg-slate-50/50 p-5 rounded-[1.5rem] border border-transparent">{user.address || 'Address details missing'}</p>
               )}
@@ -123,8 +147,8 @@ const ProfilePage: React.FC<{user: UserProfile, onNotify: (m: string) => void}> 
           <ShieldCheck size={32} />
         </div>
         <div>
-          <h4 className="font-black text-emerald-900 uppercase text-xs mb-1">Account Verified</h4>
-          <p className="text-[11px] text-emerald-700 font-bold">Your portal identity is fully protected with end-to-end encryption. All changes are logged in the secure audit trail.</p>
+          <h4 className="font-black text-emerald-900 uppercase text-xs mb-1">Secure Account</h4>
+          <p className="text-[11px] text-emerald-700 font-bold">आपका डेटा Maurya Portal पर पूरी तरह सुरक्षित और एन्क्रिप्टेड है।</p>
         </div>
       </div>
     </div>
