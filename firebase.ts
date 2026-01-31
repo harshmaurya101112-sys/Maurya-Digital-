@@ -24,7 +24,6 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { UserProfile, Transaction } from './types';
 
-// Using the exact config format provided by the user for Vite environment
 const firebaseConfig = {
   apiKey: (import.meta as any).env.VITE_FIREBASE_API_KEY,
   authDomain: (import.meta as any).env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -38,7 +37,7 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
-// Enforce Session Persistence to stay logged in after refresh
+// Keep user logged in across refreshes
 setPersistence(auth, browserLocalPersistence).catch(console.error);
 
 export const onAuthStateChangedListener = (callback: (user: any) => void) => {
@@ -55,16 +54,20 @@ export const signupUser = async (name: string, email: string, pass: string, mobi
   const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
   const user = userCredential.user;
   
-  // Send verification email immediately on signup
-  await sendEmailVerification(user);
+  // IMMEDIATELY fire verification email
+  try {
+    await sendEmailVerification(user);
+  } catch (e) {
+    console.error("Verification email failed to send instantly", e);
+  }
 
   const profile: UserProfile = {
     uid: user.uid,
-    email: email.toLowerCase(),
+    email: email.toLowerCase().trim(),
     displayName: name,
     mobile: mobile,
     walletBalance: 0,
-    isAdmin: email.toLowerCase() === 'harsh.maurya101112@gmail.com',
+    isAdmin: email.toLowerCase().trim() === 'harsh.maurya101112@gmail.com',
     createdAt: new Date().toISOString()
   };
 
