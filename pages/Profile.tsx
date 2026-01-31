@@ -22,21 +22,29 @@ const ProfilePage: React.FC<{user: UserProfile, onNotify: (m: string, type?: 'su
   }, [user]);
 
   const handleSave = async () => {
-    if (!formData.name) return onNotify("नाम भरना ज़रूरी है", "error");
+    if (!formData.name.trim()) return onNotify("नाम भरना ज़रूरी है", "error");
+    
     setSaving(true);
     try {
       const userRef = doc(db, "users", user.uid);
-      // Explicitly only update allowed fields
-      await updateDoc(userRef, {
-        displayName: formData.name,
-        address: formData.address,
-        mobile: formData.mobile
-      });
+      
+      // Strictly update only non-restricted fields
+      const updateData = {
+        displayName: formData.name.trim(),
+        address: formData.address.trim(),
+        mobile: formData.mobile.trim()
+      };
+
+      await updateDoc(userRef, updateData);
       setEditing(false);
       onNotify("प्रोफ़ाइल अपडेट सफल!");
     } catch (e: any) {
       console.error("Save Error:", e);
-      onNotify("त्रुटि: " + (e.message || "Update failed"));
+      if (e.code === 'permission-denied') {
+        onNotify("Permission Denied: Firebase Rules are blocking the update.", "error");
+      } else {
+        onNotify("त्रुटि: " + (e.message || "Update failed"), "error");
+      }
     } finally {
       setSaving(false);
     }
@@ -72,12 +80,11 @@ const ProfilePage: React.FC<{user: UserProfile, onNotify: (m: string, type?: 'su
               } active:scale-95 disabled:opacity-50`}
             >
               {saving ? <Loader2 size={18} className="animate-spin" /> : (editing ? <Save size={18} /> : <Edit2 size={18} />)}
-              {saving ? 'प्रतीक्षा करें...' : (editing ? 'बदलाव सुरक्षित करें' : 'प्रोफ़ाइल बदलें')}
+              {saving ? 'Saving...' : (editing ? 'Save Changes' : 'Update Profile')}
             </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-            {/* Email is Locked */}
             <div className="space-y-4">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 ml-4">
                 <Mail size={14} /> Registered Email
@@ -86,7 +93,6 @@ const ProfilePage: React.FC<{user: UserProfile, onNotify: (m: string, type?: 'su
                 <span className="font-black text-slate-500">{user.email}</span>
                 <Lock size={14} className="text-slate-400" />
               </div>
-              <p className="text-[8px] font-bold text-slate-400 uppercase ml-4 italic">* ईमेल बदलने के लिए एडमिन से संपर्क करें</p>
             </div>
 
             <div className="space-y-4">
@@ -145,9 +151,9 @@ const ProfilePage: React.FC<{user: UserProfile, onNotify: (m: string, type?: 'su
           <ShieldCheck size={32} />
         </div>
         <div>
-          <h4 className="font-black text-blue-900 uppercase text-xs mb-1">Data Security</h4>
+          <h4 className="font-black text-blue-900 uppercase text-xs mb-1">Security Status</h4>
           <p className="text-[11px] text-blue-700 font-bold leading-relaxed">
-            Maurya Portal par aapka har badlav encrypted hai. Name aur Address change hone se aapke transactions par koi asar nahi padega.
+            Your identity is verified. If you need to change your registered email, please contact the master admin.
           </p>
         </div>
       </div>
