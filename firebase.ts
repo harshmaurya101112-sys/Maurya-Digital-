@@ -25,37 +25,30 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { UserProfile, Transaction } from './types';
 
-/**
- * VERCEL COMPATIBLE CONFIGURATION:
- * These variables use the VITE_ prefix as requested.
- * Ensure these are set in your Vercel Project Settings -> Environment Variables.
- */
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID
+  apiKey: process.env.VITE_API_KEY, 
+  authDomain: process.env.VITE_AUTH_DOMAIN,
+  projectId: process.env.VITE_PROJECT_ID,
+  storageBucket: process.env.VITE_STORAGE_BUCKET,
+  messagingSenderId: process.env.VITE_MESSAGING_SENDER_ID,
+  appId: process.env.VITE_APP_ID
 };
 
-export default firebaseConfig;
-
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
-/**
- * FIX: SESSION PERSISTENCE
- * Ensures user stays logged in after page refresh.
- */
 setPersistence(auth, browserLocalPersistence)
-  .then(() => console.debug("Firebase: Local Persistence Enabled"))
   .catch((err) => console.error("Firebase Persistence Error:", err));
 
 export const onAuthStateChangedListener = (callback: (user: any) => void) => {
   return onAuthStateChanged(auth, callback);
+};
+
+export const resendVerification = async () => {
+  if (auth.currentUser) {
+    await sendEmailVerification(auth.currentUser);
+  }
 };
 
 export const signupUser = async (name: string, email: string, pass: string, mobile: string) => {
@@ -80,7 +73,7 @@ export const signupUser = async (name: string, email: string, pass: string, mobi
 export const loginUser = async (email: string, pass: string) => {
   const userCredential = await signInWithEmailAndPassword(auth, email, pass);
   const userDoc = await getDoc(doc(db, "users", userCredential.user.uid));
-  if (!userDoc.exists()) throw new Error("User record missing in database.");
+  if (!userDoc.exists()) throw new Error("User record not found in Firestore.");
   return userDoc.data() as UserProfile;
 };
 
