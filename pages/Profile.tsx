@@ -12,7 +12,7 @@ const ProfilePage: React.FC<{user: UserProfile, onNotify: (m: string, type?: 'su
     mobile: user.mobile || ''
   });
 
-  // Sync local form state if user data changes from Firestore
+  // Sync state with prop updates
   useEffect(() => {
     setFormData({
       name: user.displayName,
@@ -22,21 +22,21 @@ const ProfilePage: React.FC<{user: UserProfile, onNotify: (m: string, type?: 'su
   }, [user]);
 
   const handleSave = async () => {
-    if (!formData.name) return onNotify("नाम अनिवार्य है", "error");
+    if (!formData.name) return onNotify("नाम भरना ज़रूरी है", "error");
     setSaving(true);
     try {
       const userRef = doc(db, "users", user.uid);
-      // User can ONLY update name, address, and mobile. Email is locked.
+      // Explicitly only update allowed fields
       await updateDoc(userRef, {
         displayName: formData.name,
         address: formData.address,
         mobile: formData.mobile
       });
       setEditing(false);
-      onNotify("प्रोफ़ाइल अपडेट हो गई!");
+      onNotify("प्रोफ़ाइल अपडेट सफल!");
     } catch (e: any) {
-      console.error("Update Error:", e);
-      onNotify("अपडेट फेल: " + (e.message || "Unknown error"));
+      console.error("Save Error:", e);
+      onNotify("त्रुटि: " + (e.message || "Update failed"));
     } finally {
       setSaving(false);
     }
@@ -72,23 +72,21 @@ const ProfilePage: React.FC<{user: UserProfile, onNotify: (m: string, type?: 'su
               } active:scale-95 disabled:opacity-50`}
             >
               {saving ? <Loader2 size={18} className="animate-spin" /> : (editing ? <Save size={18} /> : <Edit2 size={18} />)}
-              {saving ? 'Saving...' : (editing ? 'Confirm Changes' : 'Update Profile')}
+              {saving ? 'प्रतीक्षा करें...' : (editing ? 'बदलाव सुरक्षित करें' : 'प्रोफ़ाइल बदलें')}
             </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-            {/* EMAIL - ALWAYS LOCKED FOR USER */}
+            {/* Email is Locked */}
             <div className="space-y-4">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 ml-4">
-                <Mail size={14} /> Email Address (Primary)
+                <Mail size={14} /> Registered Email
               </label>
-              <div className="relative group">
-                <p className="font-black text-slate-400 bg-slate-50 p-5 rounded-[1.5rem] border border-slate-100 flex items-center justify-between">
-                  {user.email}
-                  {/* Fixed: Removed 'title' prop from Lucide icon to avoid TS error */}
-                  <Lock size={14} className="opacity-40" />
-                </p>
+              <div className="bg-slate-50 p-5 rounded-[1.5rem] border border-slate-100 flex items-center justify-between opacity-70">
+                <span className="font-black text-slate-500">{user.email}</span>
+                <Lock size={14} className="text-slate-400" />
               </div>
+              <p className="text-[8px] font-bold text-slate-400 uppercase ml-4 italic">* ईमेल बदलने के लिए एडमिन से संपर्क करें</p>
             </div>
 
             <div className="space-y-4">
@@ -112,6 +110,8 @@ const ProfilePage: React.FC<{user: UserProfile, onNotify: (m: string, type?: 'su
               </label>
               {editing ? (
                 <input 
+                  type="tel"
+                  maxLength={10}
                   className="w-full p-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] font-bold text-sm outline-none focus:ring-4 focus:ring-blue-500/5 transition-all" 
                   value={formData.mobile} 
                   onChange={e => setFormData({...formData, mobile: e.target.value.replace(/\D/g, '')})} 
@@ -140,14 +140,14 @@ const ProfilePage: React.FC<{user: UserProfile, onNotify: (m: string, type?: 'su
         </div>
       </div>
 
-      <div className="bg-emerald-50 border border-emerald-100 p-8 rounded-[3rem] flex items-center gap-6">
-        <div className="bg-emerald-600 text-white p-4 rounded-3xl">
+      <div className="bg-blue-50 border border-blue-100 p-8 rounded-[3rem] flex items-center gap-6">
+        <div className="bg-blue-900 text-white p-4 rounded-3xl">
           <ShieldCheck size={32} />
         </div>
         <div>
-          <h4 className="font-black text-emerald-900 uppercase text-xs mb-1">Identity Policy</h4>
-          <p className="text-[11px] text-emerald-700 font-bold leading-relaxed">
-            सुरक्षा कारणों से ईमेल बदलने के लिए कृपया एडमिन से संपर्क करें। आप अपना नाम, मोबाइल और पता खुद अपडेट कर सकते हैं।
+          <h4 className="font-black text-blue-900 uppercase text-xs mb-1">Data Security</h4>
+          <p className="text-[11px] text-blue-700 font-bold leading-relaxed">
+            Maurya Portal par aapka har badlav encrypted hai. Name aur Address change hone se aapke transactions par koi asar nahi padega.
           </p>
         </div>
       </div>
