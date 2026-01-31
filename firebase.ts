@@ -1,66 +1,67 @@
 
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import { 
+  getAuth, 
+  onAuthStateChanged, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signOut,
+  sendEmailVerification,
+  browserLocalPersistence,
+  setPersistence
+} from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+import { 
+  getFirestore, 
+  doc, 
+  setDoc, 
+  getDoc, 
+  updateDoc, 
+  onSnapshot, 
+  collection, 
+  query, 
+  addDoc,
+  getDocs,
+  deleteDoc
+} from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { UserProfile, Transaction } from './types';
 
-const DB_KEYS = {
-  USERS: 'maurya_portal_users_v4', // Incremented version to clear old inconsistent data
-  SESSION: 'maurya_active_session_id',
-  HISTORY: 'maurya_tx_history_v4_'
+/**
+ * CONFIGURATION GUIDE:
+ * 1. Go to Vercel Dashboard -> Settings -> Environment Variables.
+ * 2. Key: API_KEY
+ * 3. Value: [Paste your Firebase Web API Key here]
+ */
+const firebaseConfig = {
+  // Use the exact environment variable name provided by the platform
+  apiKey: process.env.API_KEY || "AIzaSy_YOUR_FALLBACK_KEY_IF_NEEDED", 
+  authDomain: "maurya-portal.firebaseapp.com",
+  projectId: "maurya-portal",
+  storageBucket: "maurya-portal.appspot.com",
+  messagingSenderId: "789456123",
+  appId: "1:789456123:web:abc123def"
 };
 
-const getFromStorage = (key: string) => {
-  try {
-    const data = localStorage.getItem(key);
-    return data ? JSON.parse(data) : null;
-  } catch (e) {
-    return null;
-  }
+// Initialize Firebase App
+const app = initializeApp(firebaseConfig);
+export const auth = getAuth(app);
+export const db = getFirestore(app);
+
+// Force Browser to remember the login session even after page refresh
+setPersistence(auth, browserLocalPersistence)
+  .then(() => console.debug("Auth persistence enabled: Local"))
+  .catch(err => console.error("Persistence Error:", err));
+
+export const onAuthStateChangedListener = (callback: (user: any) => void) => {
+  return onAuthStateChanged(auth, callback);
 };
 
-const saveToStorage = (key: string, data: any) => {
-  localStorage.setItem(key, JSON.stringify(data));
-};
+export const signupUser = async (name: string, email: string, pass: string, mobile: string) => {
+  const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+  const user = userCredential.user;
+  await sendEmailVerification(user);
 
-// Initialize session immediately on load
-const savedSession = localStorage.getItem(DB_KEYS.SESSION);
-export const auth = { 
-  currentUser: savedSession ? { uid: savedSession } : null 
-};
-
-type AuthCallback = (user: any) => void;
-const authListeners: AuthCallback[] = [];
-
-export const onAuthStateChanged = (authObj: any, callback: AuthCallback) => {
-  authListeners.push(callback);
-  
-  // Persistence Check
-  const sessionUid = localStorage.getItem(DB_KEYS.SESSION);
-  if (sessionUid) {
-    const users = getFromStorage(DB_KEYS.USERS) || [];
-    const user = users.find((u: any) => u.uid === sessionUid);
-    if (user) {
-      const { password, ...safeUser } = user;
-      callback(safeUser);
-    } else {
-      callback(null);
-    }
-  } else {
-    callback(null);
-  }
-  
-  return () => {
-    const index = authListeners.indexOf(callback);
-    if (index > -1) authListeners.splice(index, 1);
-  };
-};
-
-export const signupUser = async (name: string, email: string, pass: string, mobile: string): Promise<UserProfile> => {
-  const users = getFromStorage(DB_KEYS.USERS) || [];
-  if (users.find((u: any) => u.email.toLowerCase() === email.toLowerCase())) {
-    throw { code: 'auth/email-already-in-use', message: 'Email already exists' };
-  }
-
-  const newUser: UserProfile = {
-    uid: 'USR' + Math.random().toString(36).substr(2, 9).toUpperCase(),
+  const profile: UserProfile = {
+    uid: user.uid,
     email: email.toLowerCase(),
     displayName: name,
     mobile: mobile,
@@ -69,71 +70,47 @@ export const signupUser = async (name: string, email: string, pass: string, mobi
     createdAt: new Date().toISOString()
   };
 
-  users.push({ ...newUser, password: pass });
-  saveToStorage(DB_KEYS.USERS, users);
-  localStorage.setItem(DB_KEYS.SESSION, newUser.uid);
-  
-  authListeners.forEach(cb => cb(newUser));
-  return newUser;
+  await setDoc(doc(db, "users", user.uid), profile);
+  return profile;
 };
 
-export const loginUser = async (email: string, pass: string): Promise<UserProfile> => {
-  const users = getFromStorage(DB_KEYS.USERS) || [];
-  const found = users.find((u: any) => u.email.toLowerCase() === email.toLowerCase() && u.password === pass);
-
-  if (!found) {
-    throw { code: 'auth/invalid-credential', message: 'Invalid email or password' };
-  }
-
-  const { password, ...userData } = found;
-  localStorage.setItem(DB_KEYS.SESSION, userData.uid);
-  authListeners.forEach(cb => cb(userData));
-  return userData as UserProfile;
+export const loginUser = async (email: string, pass: string) => {
+  const userCredential = await signInWithEmailAndPassword(auth, email, pass);
+  const userDoc = await getDoc(doc(db, "users", userCredential.user.uid));
+  if (!userDoc.exists()) throw new Error("User record missing in Database.");
+  return userDoc.data() as UserProfile;
 };
 
 export const logoutUser = async () => {
-  localStorage.removeItem(DB_KEYS.SESSION);
-  authListeners.forEach(cb => cb(null));
+  await signOut(auth);
 };
 
-export const db = {};
-export const doc = (db: any, col: string, id: string) => ({ col, id });
+export { doc, onSnapshot, updateDoc, collection };
 
-export const onSnapshot = (docRef: any, callback: (snap: any) => void) => {
-  const trigger = () => {
-    const users = getFromStorage(DB_KEYS.USERS) || [];
-    const user = users.find((u: any) => u.uid === docRef.id);
-    callback({ exists: () => !!user, data: () => user });
-  };
-  trigger();
-  // Simple polling for mock real-time
-  const interval = setInterval(trigger, 2000);
-  return () => clearInterval(interval);
+export const processSecurePayment = async (amount: number) => {
+  await new Promise(resolve => setTimeout(resolve, 2000));
+  return true;
 };
 
-export const updateDoc = async (docRef: any, data: any) => {
-  const users = getFromStorage(DB_KEYS.USERS) || [];
-  const idx = users.findIndex((u: any) => u.uid === docRef.id);
-  if (idx > -1) {
-    users[idx] = { ...users[idx], ...data };
-    saveToStorage(DB_KEYS.USERS, users);
-  }
+export const setWalletPinDB = async (uid: string, pin: string) => {
+  await updateDoc(doc(db, "users", uid), { walletPin: pin });
+};
+
+export const onSnapshotCollection = (ref: any, callback: any) => {
+  return onSnapshot(ref, callback);
 };
 
 export const updateWalletOnDB = async (uid: string, amount: number, service: string, type: 'debit' | 'credit', pin?: string) => {
-  const users = getFromStorage(DB_KEYS.USERS) || [];
-  const idx = users.findIndex((u: any) => u.uid === uid);
-  if (idx === -1) throw new Error("User not found");
+  const userRef = doc(db, "users", uid);
+  const userSnap = await getDoc(userRef);
+  if (!userSnap.exists()) throw new Error("User not found");
+  const userData = userSnap.data() as UserProfile;
 
-  const user = users[idx];
-  if (type === 'debit' && user.walletPin && pin !== user.walletPin) throw new Error("Wrong PIN");
-  if (type === 'debit' && user.walletBalance < amount) throw new Error("Insufficient Balance");
+  if (type === 'debit' && userData.walletPin && pin !== userData.walletPin) throw new Error("Wrong PIN");
+  if (type === 'debit' && userData.walletBalance < amount) throw new Error("Insufficient Balance");
 
-  const oldBal = user.walletBalance;
-  const newBal = type === 'debit' ? oldBal - amount : oldBal + amount;
-  
-  users[idx].walletBalance = newBal;
-  saveToStorage(DB_KEYS.USERS, users);
+  const newBal = type === 'debit' ? userData.walletBalance - amount : userData.walletBalance + amount;
+  await updateDoc(userRef, { walletBalance: newBal });
 
   const tx: Transaction = {
     id: 'TX' + Date.now(),
@@ -142,32 +119,28 @@ export const updateWalletOnDB = async (uid: string, amount: number, service: str
     type,
     date: new Date().toLocaleString(),
     status: 'success',
-    prevBalance: oldBal,
+    prevBalance: userData.walletBalance,
     newBalance: newBal
   };
 
-  const hKey = DB_KEYS.HISTORY + uid;
-  const history = getFromStorage(hKey) || [];
-  history.unshift(tx);
-  saveToStorage(hKey, history);
-
+  await addDoc(collection(db, "users", uid, "history"), tx);
   return tx;
 };
 
-export const getAllUsers = async () => getFromStorage(DB_KEYS.USERS) || [];
-export const adminUpdateUser = async (uid: string, data: any) => updateDoc({ id: uid }, data);
-export const makeUserAdmin = async (uid: string) => updateDoc({ id: uid }, { isAdmin: true });
-export const setWalletPinDB = async (uid: string, pin: string) => updateDoc({ id: uid }, { walletPin: pin });
-export const processSecurePayment = async (amt: number) => true;
+export const getAllUsers = async () => {
+  const q = query(collection(db, "users"));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => d.data() as UserProfile);
+};
 
-export const collection = (db: any, ...path: string[]) => ({ path });
-export const onSnapshotCollection = (ref: any, callback: (snap: any) => void) => {
-  const uid = ref.path[1];
-  const trigger = () => {
-    const data = getFromStorage(DB_KEYS.HISTORY + uid) || [];
-    callback({ docs: data.map((d: any) => ({ data: () => d })) });
-  };
-  trigger();
-  const interval = setInterval(trigger, 3000);
-  return () => clearInterval(interval);
+export const deleteUserDB = async (uid: string) => {
+  await deleteDoc(doc(db, "users", uid));
+};
+
+export const adminUpdateUser = async (uid: string, data: any) => {
+  await updateDoc(doc(db, "users", uid), data);
+};
+
+export const makeUserAdmin = async (uid: string) => {
+  await updateDoc(doc(db, "users", uid), { isAdmin: true });
 };
