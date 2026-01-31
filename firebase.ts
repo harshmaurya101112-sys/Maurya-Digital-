@@ -20,7 +20,9 @@ import {
   query, 
   addDoc,
   getDocs,
-  deleteDoc
+  deleteDoc,
+  where,
+  orderBy
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { UserProfile, Transaction } from './types';
 
@@ -54,11 +56,10 @@ export const signupUser = async (name: string, email: string, pass: string, mobi
   const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
   const user = userCredential.user;
   
-  // IMMEDIATELY fire verification email
   try {
     await sendEmailVerification(user);
   } catch (e) {
-    console.error("Verification email failed to send instantly", e);
+    console.error("Verification email failed", e);
   }
 
   const profile: UserProfile = {
@@ -86,8 +87,8 @@ export const logoutUser = async () => {
   await signOut(auth);
 };
 
-// Fix: Included 'query' in the export list to resolve module import errors in other components like Admin.tsx.
-export { doc, onSnapshot, updateDoc, collection, query };
+// Re-exporting specifically to avoid build-time import errors
+export { doc, onSnapshot, updateDoc, collection, query, where, orderBy, getDoc, setDoc };
 
 export const updateWalletOnDB = async (uid: string, amount: number, service: string, type: 'debit' | 'credit', pin?: string) => {
   const userRef = doc(db, "users", uid);
