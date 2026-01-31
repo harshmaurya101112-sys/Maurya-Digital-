@@ -3,7 +3,8 @@ import { UserProfile } from '../types';
 import { User, MapPin, Phone, Mail, Save, Edit2, Loader2, ShieldCheck } from 'lucide-react';
 import { db, doc, updateDoc } from '../firebase';
 
-const ProfilePage: React.FC<{user: UserProfile, onNotify: (m: string) => void}> = ({ user, onNotify }) => {
+// Updated onNotify type to support optional status type for compatibility with showToast
+const ProfilePage: React.FC<{user: UserProfile, onNotify: (m: string, type?: 'success' | 'error') => void}> = ({ user, onNotify }) => {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({ 
@@ -13,7 +14,6 @@ const ProfilePage: React.FC<{user: UserProfile, onNotify: (m: string) => void}> 
     email: user.email 
   });
 
-  // Sync local form state if user data changes from Firestore
   useEffect(() => {
     setFormData({
       name: user.displayName,
@@ -24,6 +24,8 @@ const ProfilePage: React.FC<{user: UserProfile, onNotify: (m: string) => void}> 
   }, [user]);
 
   const handleSave = async () => {
+    // Fixed type error: onNotify now accepts a second argument for notification type
+    if (!formData.name.trim()) return onNotify("Name cannot be empty", "error");
     setSaving(true);
     try {
       const userRef = doc(db, "users", user.uid);
