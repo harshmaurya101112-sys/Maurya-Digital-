@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, Transaction } from '../types';
 import { Wallet, Plus, ShieldCheck, History, ArrowUpRight, ArrowDownLeft, Loader2, CheckCircle } from 'lucide-react';
-import { updateWalletOnDB, processSecurePayment, setWalletPinDB, db, collection, onSnapshotCollection } from '../firebase';
+// Fix: Use onSnapshot instead of onSnapshotCollection
+import { updateWalletOnDB, processSecurePayment, setWalletPinDB, db, collection, onSnapshot } from '../firebase';
 
 const WalletPage: React.FC<{user: UserProfile}> = ({ user }) => {
   const [history, setHistory] = useState<Transaction[]>([]);
@@ -12,8 +13,8 @@ const WalletPage: React.FC<{user: UserProfile}> = ({ user }) => {
   const [newPin, setNewPin] = useState('');
 
   useEffect(() => {
-    // Using mock collection listener
-    const unsub = onSnapshotCollection(collection(db, "users", user.uid, "history"), (snap: any) => {
+    // Fix: Using onSnapshot which is exported from firebase.ts to listen to collection updates
+    const unsub = onSnapshot(collection(db, "users", user.uid, "history"), (snap: any) => {
       const txs = snap.docs.map((d: any) => d.data() as Transaction);
       setHistory(txs);
     });
