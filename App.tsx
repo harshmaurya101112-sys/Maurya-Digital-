@@ -10,7 +10,7 @@ import ProfilePage from './pages/Profile';
 import AdminPage from './pages/Admin';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
-import { CheckCircle, AlertCircle, ShieldCheck, Loader2 } from 'lucide-react';
+import { CheckCircle, ShieldCheck, Loader2 } from 'lucide-react';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -18,13 +18,40 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{msg: string, type: 'success' | 'error'} | null>(null);
 
+  // Sync current page to localStorage
   useEffect(() => {
     localStorage.setItem('maurya_last_page', currentPage);
   }, [currentPage]);
 
+  // Session Hydration from LocalStorage
+  useEffect(() => {
+    const savedUid = localStorage.getItem('maurya_active_uid');
+    let unsub: () => void = () => {};
+
+    if (savedUid) {
+      setLoading(true);
+      unsub = onSnapshot(doc(db, "users", savedUid), (snap) => {
+        if (snap.exists()) {
+          setUser(snap.data() as UserProfile);
+        } else {
+          localStorage.removeItem('maurya_active_uid');
+          setUser(null);
+        }
+        setLoading(false);
+      }, (err) => {
+        console.error("Session Sync Error:", err);
+        setLoading(false);
+      });
+    } else {
+      setLoading(false);
+    }
+    return () => unsub();
+  }, []);
+
   const handleAuth0Login = async () => {
     setLoading(true);
     try {
+      // Simulation of Auth0 Sync
       const mockAuth0User = {
         email: 'harsh.maurya101112@gmail.com',
         name: 'Harsh Maurya',
@@ -39,33 +66,11 @@ const App: React.FC = () => {
       }
     } catch (error) {
       console.error("Login sync failed:", error);
+      showToast("Authentication Failed", "error");
     } finally {
       setLoading(false);
     }
   };
-
-  // IMMEDIATE HYDRATION: Listen to User state from DB based on saved UID
-  useEffect(() => {
-    const savedUid = localStorage.getItem('maurya_active_uid');
-    if (savedUid) {
-       setLoading(true);
-       const unsub = onSnapshot(doc(db, "users", savedUid), (snap) => {
-         if (snap.exists()) {
-           setUser(snap.data() as UserProfile);
-         } else {
-           localStorage.removeItem('maurya_active_uid');
-           setUser(null);
-         }
-         setLoading(false);
-       }, (err) => {
-         console.error("Session Sync Error:", err);
-         setLoading(false);
-       });
-       return () => unsub();
-    } else {
-      setLoading(false);
-    }
-  }, []);
 
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type });
@@ -88,7 +93,7 @@ const App: React.FC = () => {
           <ShieldCheck className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-blue-500" size={32} />
         </div>
         <h2 className="text-xl font-black text-white uppercase tracking-widest animate-pulse">Maurya Secure Bridge</h2>
-        <p className="text-slate-500 text-[9px] font-black uppercase mt-2 tracking-[0.4em]">Initializing Merchant Environment...</p>
+        <p className="text-slate-500 text-[9px] font-black uppercase mt-2 tracking-[0.4em]">Restoring Merchant Session...</p>
       </div>
     );
   }
@@ -111,8 +116,12 @@ const App: React.FC = () => {
           <div className="max-w-[1600px] mx-auto">
             {currentPage === 'dashboard' && <Dashboard user={user} onPageChange={setCurrentPage} />}
             {currentPage === 'services' && <ServicesPage user={user} onAction={async (amt, svc, type, pin) => {
-              await updateWalletOnDB(user.uid, amt, svc, type, pin);
-              showToast(`Bridge Active: ${svc}`);
+              try {
+                await updateWalletOnDB(user.uid, amt, svc, type, pin);
+                showToast(`Service Bridge Success: ${svc}`);
+              } catch (e: any) {
+                showToast(e.message, "error");
+              }
             }} />}
             {currentPage === 'wallet' && <WalletPage user={user} />}
             {currentPage === 'profile' && <ProfilePage user={user} onNotify={showToast} />}
@@ -121,7 +130,7 @@ const App: React.FC = () => {
         </main>
       </div>
       {toast && (
-        <div className={`fixed top-12 left-1/2 -translate-x-1/2 px-12 py-6 rounded-[3rem] shadow-4xl font-black text-[11px] uppercase tracking-widest z-[3000] flex items-center gap-4 animate-in slide-in-from-top-12 ${toast.type === 'success' ? 'bg-blue-950 text-white' : 'bg-red-600 text-white'}`}>
+        <div className={`fixed top-12 left-1/2 -translate-x-1/2 px-12 py-6 rounded-[3rem] shadow-4xl font-black text-[11px] uppercase tracking-widest z-[3000] flex items-center gap-4 animate-in slide-in-from-top-12 ${toast.type === 'success' ? 'bg-blue-950 text-white shadow-blue-500/20' : 'bg-red-600 text-white shadow-red-500/20'}`}>
           <CheckCircle size={20} /> {toast.msg}
         </div>
       )}
