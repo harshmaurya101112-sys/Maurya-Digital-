@@ -47,8 +47,12 @@ const Header: React.FC<HeaderProps> = ({ user, onPageChange, onLogout }) => {
             </span>
           </div>
           <div className="relative">
-            <div className="w-12 h-12 bg-blue-900 rounded-2xl flex items-center justify-center font-black text-white text-sm shadow-lg shadow-blue-900/20 group-hover:scale-105 transition-transform">
-              {user.displayName.charAt(0).toUpperCase()}
+            <div className="w-12 h-12 bg-blue-900 rounded-2xl flex items-center justify-center font-black text-white text-sm shadow-lg shadow-blue-900/20 group-hover:scale-105 transition-transform overflow-hidden">
+              {user.photoURL ? (
+                <img src={user.photoURL} alt="User" className="w-full h-full object-cover" />
+              ) : (
+                user.displayName.charAt(0).toUpperCase()
+              )}
             </div>
             <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></div>
           </div>
