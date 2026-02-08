@@ -1,26 +1,20 @@
 
 /**
- * Auth0 Configuration
- * Replace the values below with your actual credentials from the Auth0 Dashboard.
- * Dashboard: https://manage.auth0.com/
+ * Auth0 Configuration for Maurya Portal
+ * 
+ * Secure implementation using Environment Variables.
+ * Values are fetched from Vercel/Environment at runtime.
  */
 
 export const auth0Config = {
-  // Your Auth0 Domain (e.g., 'dev-abc123.us.auth0.com')
-  domain: "dev-your-domain.auth0.com", 
+  // Vercel Dashboard mein 'VITE_AUTH0_DOMAIN' naam se save karein
+  domain: (import.meta as any).env.VITE_AUTH0_DOMAIN || "dev-placeholder.auth0.com", 
   
-  // Your Auth0 Client ID
-  clientId: "YOUR_CLIENT_ID_FROM_DASHBOARD",
+  // Vercel Dashboard mein 'VITE_AUTH0_CLIENT_ID' naam se save karein
+  clientId: (import.meta as any).env.VITE_AUTH0_CLIENT_ID || "PLACEHOLDER_CLIENT_ID",
   
-  // The URL to redirect back to after login
   authorizationParams: {
     redirect_uri: window.location.origin,
-    // Optional: audience: "https://your-api-identifier",
-    // Optional: scope: "openid profile email"
+    scope: "openid profile email"
   }
 };
-
-/**
- * Note: To use these in your code, you would typically install @auth0/auth0-react
- * and wrap your App in <Auth0Provider {...auth0Config}>
- */

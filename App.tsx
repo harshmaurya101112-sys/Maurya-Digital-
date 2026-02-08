@@ -10,7 +10,7 @@ import ProfilePage from './pages/Profile';
 import AdminPage from './pages/Admin';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
-import { CheckCircle, ShieldCheck, Loader2 } from 'lucide-react';
+import { CheckCircle, ShieldCheck } from 'lucide-react';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -23,13 +23,14 @@ const App: React.FC = () => {
     localStorage.setItem('maurya_last_page', currentPage);
   }, [currentPage]);
 
-  // Session Hydration from LocalStorage
+  // Session Hydration: Ye refresh par logout hone se rokta hai
   useEffect(() => {
     const savedUid = localStorage.getItem('maurya_active_uid');
     let unsub: () => void = () => {};
 
     if (savedUid) {
       setLoading(true);
+      // Firebase real-time listener refresh par bhi user data recover kar leta hai
       unsub = onSnapshot(doc(db, "users", savedUid), (snap) => {
         if (snap.exists()) {
           setUser(snap.data() as UserProfile);
@@ -39,7 +40,7 @@ const App: React.FC = () => {
         }
         setLoading(false);
       }, (err) => {
-        console.error("Session Sync Error:", err);
+        console.error("Auth Session Error:", err);
         setLoading(false);
       });
     } else {
@@ -51,7 +52,7 @@ const App: React.FC = () => {
   const handleAuth0Login = async () => {
     setLoading(true);
     try {
-      // Simulation of Auth0 Sync
+      // Simulation of Auth0 Sync (Real integration mein auth0.getUser() call hoga)
       const mockAuth0User = {
         email: 'harsh.maurya101112@gmail.com',
         name: 'Harsh Maurya',
@@ -62,10 +63,10 @@ const App: React.FC = () => {
       const profile = await syncAuth0UserToFirebase(mockAuth0User);
       if (profile) {
         setUser(profile);
+        // CRITICAL: UID ko refresh ke liye save karna
         localStorage.setItem('maurya_active_uid', profile.uid);
       }
     } catch (error) {
-      console.error("Login sync failed:", error);
       showToast("Authentication Failed", "error");
     } finally {
       setLoading(false);
