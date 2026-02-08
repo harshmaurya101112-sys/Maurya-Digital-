@@ -1,25 +1,45 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useRef } from 'react';
 import { UserProfile } from '../types';
-import { User, MapPin, Phone, Mail, Save, Edit2, Loader2, ShieldCheck, Lock } from 'lucide-react';
+import { User, MapPin, Phone, Mail, Save, Edit2, Loader2, ShieldCheck, Lock, Camera, Trash2 } from 'lucide-react';
 import { db, doc, updateDoc } from '../firebase';
 
 const ProfilePage: React.FC<{user: UserProfile, onNotify: (m: string, type?: 'success' | 'error') => void}> = ({ user, onNotify }) => {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const [formData, setFormData] = useState({ 
     name: user.displayName, 
     address: user.address || '', 
-    mobile: user.mobile || ''
+    mobile: user.mobile || '',
+    photoURL: user.photoURL || ''
   });
 
-  // Sync state with prop updates
   useEffect(() => {
     setFormData({
       name: user.displayName,
       address: user.address || '',
-      mobile: user.mobile || ''
+      mobile: user.mobile || '',
+      photoURL: user.photoURL || ''
     });
   }, [user]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        return onNotify("File size must be less than 2MB", "error");
+      }
+      
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({ ...prev, photoURL: reader.result as string }));
+        onNotify("Photo loaded. Click 'Save Changes' to update profile.");
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSave = async () => {
     if (!formData.name.trim()) return onNotify("नाम भरना ज़रूरी है", "error");
@@ -28,11 +48,11 @@ const ProfilePage: React.FC<{user: UserProfile, onNotify: (m: string, type?: 'su
     try {
       const userRef = doc(db, "users", user.uid);
       
-      // Strictly update only non-restricted fields
       const updateData = {
         displayName: formData.name.trim(),
         address: formData.address.trim(),
-        mobile: formData.mobile.trim()
+        mobile: formData.mobile.trim(),
+        photoURL: formData.photoURL // Update the photo URL/Base64
       };
 
       await updateDoc(userRef, updateData);
@@ -40,29 +60,58 @@ const ProfilePage: React.FC<{user: UserProfile, onNotify: (m: string, type?: 'su
       onNotify("प्रोफ़ाइल अपडेट सफल!");
     } catch (e: any) {
       console.error("Save Error:", e);
-      if (e.code === 'permission-denied') {
-        onNotify("Permission Denied: Firebase Rules are blocking the update.", "error");
-      } else {
-        onNotify("त्रुटि: " + (e.message || "Update failed"), "error");
-      }
+      onNotify("त्रुटि: " + (e.message || "Update failed"), "error");
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in duration-500">
+    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500">
       <div className="bg-white rounded-[4rem] shadow-sm border border-slate-100 overflow-hidden relative">
-        <div className="bg-blue-900 h-40 relative">
-          <div className="absolute -bottom-16 left-12 w-32 h-32 bg-white rounded-[2.5rem] shadow-2xl flex items-center justify-center p-3">
-            <div className="w-full h-full bg-slate-50 rounded-[2rem] flex items-center justify-center font-black text-5xl text-blue-900 uppercase">
-              {user.displayName.charAt(0)}
+        <div className="bg-blue-900 h-48 relative">
+          <div className="absolute -bottom-20 left-12 group">
+            <div className="w-40 h-40 bg-white rounded-[3rem] shadow-2xl flex items-center justify-center p-3 relative overflow-hidden">
+              <div className="w-full h-full bg-slate-50 rounded-[2.5rem] flex items-center justify-center overflow-hidden border-4 border-slate-50">
+                {formData.photoURL ? (
+                  <img src={formData.photoURL} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="font-black text-6xl text-blue-900 uppercase">
+                    {user.displayName.charAt(0)}
+                  </span>
+                )}
+              </div>
+              
+              {/* Photo Upload Overlay */}
+              <div 
+                onClick={() => fileInputRef.current?.click()}
+                className="absolute inset-0 bg-blue-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center cursor-pointer text-white"
+              >
+                <Camera size={32} />
+                <span className="text-[10px] font-black uppercase mt-2 tracking-widest">Change Photo</span>
+              </div>
+              <input 
+                type="file" 
+                hidden 
+                ref={fileInputRef} 
+                accept="image/*" 
+                onChange={handleFileChange} 
+              />
             </div>
+            
+            {formData.photoURL && (
+               <button 
+                onClick={() => setFormData({...formData, photoURL: ''})}
+                className="absolute -top-2 -right-2 bg-red-500 text-white p-2 rounded-full shadow-lg hover:bg-red-600 transition-colors opacity-0 group-hover:opacity-100"
+               >
+                 <Trash2 size={14} />
+               </button>
+            )}
           </div>
         </div>
 
-        <div className="p-12 pt-24">
-          <div className="flex justify-between items-start mb-12">
+        <div className="p-12 pt-28">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-12">
             <div>
               <h2 className="text-4xl font-black text-blue-950 uppercase mb-2 tracking-tighter">{user.displayName}</h2>
               <div className="flex items-center gap-3">
@@ -75,7 +124,7 @@ const ProfilePage: React.FC<{user: UserProfile, onNotify: (m: string, type?: 'su
             <button 
               onClick={() => editing ? handleSave() : setEditing(true)} 
               disabled={saving}
-              className={`px-10 py-5 rounded-[2rem] text-[11px] font-black uppercase flex items-center gap-3 transition-all shadow-2xl ${
+              className={`px-12 py-6 rounded-[2rem] text-[11px] font-black uppercase flex items-center gap-3 transition-all shadow-2xl ${
                 editing ? 'bg-emerald-600 text-white shadow-emerald-600/20' : 'bg-blue-950 text-white shadow-blue-950/20'
               } active:scale-95 disabled:opacity-50`}
             >
@@ -89,7 +138,7 @@ const ProfilePage: React.FC<{user: UserProfile, onNotify: (m: string, type?: 'su
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 ml-4">
                 <Mail size={14} /> Registered Email
               </label>
-              <div className="bg-slate-50 p-5 rounded-[1.5rem] border border-slate-100 flex items-center justify-between opacity-70">
+              <div className="bg-slate-50 p-6 rounded-[1.5rem] border border-slate-100 flex items-center justify-between opacity-70">
                 <span className="font-black text-slate-500">{user.email}</span>
                 <Lock size={14} className="text-slate-400" />
               </div>
@@ -101,12 +150,12 @@ const ProfilePage: React.FC<{user: UserProfile, onNotify: (m: string, type?: 'su
               </label>
               {editing ? (
                 <input 
-                  className="w-full p-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] font-bold text-sm outline-none focus:ring-4 focus:ring-blue-500/5 transition-all" 
+                  className="w-full p-6 bg-slate-50 border border-slate-100 rounded-[1.5rem] font-bold text-sm outline-none focus:ring-4 focus:ring-blue-500/5 transition-all shadow-inner" 
                   value={formData.name} 
                   onChange={e => setFormData({...formData, name: e.target.value})} 
                 />
               ) : (
-                <p className="font-black text-slate-800 bg-slate-50/50 p-5 rounded-[1.5rem] border border-transparent">{user.displayName}</p>
+                <p className="font-black text-slate-800 bg-slate-50/50 p-6 rounded-[1.5rem] border border-transparent">{user.displayName}</p>
               )}
             </div>
 
@@ -118,12 +167,12 @@ const ProfilePage: React.FC<{user: UserProfile, onNotify: (m: string, type?: 'su
                 <input 
                   type="tel"
                   maxLength={10}
-                  className="w-full p-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] font-bold text-sm outline-none focus:ring-4 focus:ring-blue-500/5 transition-all" 
+                  className="w-full p-6 bg-slate-50 border border-slate-100 rounded-[1.5rem] font-bold text-sm outline-none focus:ring-4 focus:ring-blue-500/5 transition-all shadow-inner" 
                   value={formData.mobile} 
                   onChange={e => setFormData({...formData, mobile: e.target.value.replace(/\D/g, '')})} 
                 />
               ) : (
-                <p className="font-black text-slate-800 bg-slate-50/50 p-5 rounded-[1.5rem] border border-transparent">{user.mobile || 'Not provided'}</p>
+                <p className="font-black text-slate-800 bg-slate-50/50 p-6 rounded-[1.5rem] border border-transparent">{user.mobile || 'Not provided'}</p>
               )}
             </div>
 
@@ -134,12 +183,12 @@ const ProfilePage: React.FC<{user: UserProfile, onNotify: (m: string, type?: 'su
               {editing ? (
                 <textarea 
                   rows={2} 
-                  className="w-full p-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] font-bold text-sm outline-none focus:ring-4 focus:ring-blue-500/5 transition-all resize-none" 
+                  className="w-full p-6 bg-slate-50 border border-slate-100 rounded-[1.5rem] font-bold text-sm outline-none focus:ring-4 focus:ring-blue-500/5 transition-all resize-none shadow-inner" 
                   value={formData.address} 
                   onChange={e => setFormData({...formData, address: e.target.value})} 
                 />
               ) : (
-                <p className="font-black text-slate-800 bg-slate-50/50 p-5 rounded-[1.5rem] border border-transparent">{user.address || 'Address details missing'}</p>
+                <p className="font-black text-slate-800 bg-slate-50/50 p-6 rounded-[1.5rem] border border-transparent">{user.address || 'Address details missing'}</p>
               )}
             </div>
           </div>
