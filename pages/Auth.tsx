@@ -1,19 +1,18 @@
 
-import React from 'react';
-import { Monitor, ShieldCheck, ArrowRight, Lock, Globe, Server } from 'lucide-react';
+import React, { useState } from 'react';
+import { Monitor, ShieldCheck, ArrowRight, Lock, Globe, Server, Loader2 } from 'lucide-react';
 
 const AuthPage: React.FC<{onAuthSuccess: () => void}> = ({ onAuthSuccess }) => {
-  
-  const handleAuth0Login = () => {
-    // In a real implementation with Auth0 SDK:
-    // auth0.loginWithRedirect();
-    
-    // For this prototype, we simulate the SSO flow
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = () => {
+    setLoading(true);
     onAuthSuccess();
+    // Redirect might take a second, so we keep loading true
   };
 
   return (
-    <div className="min-h-screen bg-[#020617] flex items-center justify-center p-6 relative overflow-hidden">
+    <div className="min-h-screen bg-[#020617] flex items-center justify-center p-6 relative overflow-hidden text-slate-900">
       {/* Dynamic Background */}
       <div className="absolute top-0 left-0 w-full h-full opacity-30 pointer-events-none">
         <div className="absolute top-[-20%] left-[-10%] w-[1000px] h-[1000px] bg-blue-600 rounded-full blur-[250px] animate-pulse"></div>
@@ -35,12 +34,13 @@ const AuthPage: React.FC<{onAuthSuccess: () => void}> = ({ onAuthSuccess }) => {
 
           <div className="space-y-6">
             <button 
-              onClick={handleAuth0Login}
-              className="w-full bg-blue-950 hover:bg-black text-white py-8 rounded-[2.5rem] font-black text-lg uppercase flex items-center justify-center gap-6 shadow-4xl transition-all hover:scale-105 active:scale-95 group"
+              onClick={handleLogin}
+              disabled={loading}
+              className="w-full bg-blue-950 hover:bg-black text-white py-8 rounded-[2.5rem] font-black text-lg uppercase flex items-center justify-center gap-6 shadow-4xl transition-all hover:scale-105 active:scale-95 group disabled:opacity-70"
             >
-              <Lock size={24} className="group-hover:text-orange-400 transition-colors" />
-              Sign In with Auth0
-              <ArrowRight size={24} className="group-hover:translate-x-3 transition-transform" />
+              {loading ? <Loader2 className="animate-spin" size={24} /> : <Lock size={24} className="group-hover:text-orange-400 transition-colors" />}
+              {loading ? 'Redirecting to Auth0...' : 'Sign In with Auth0'}
+              {!loading && <ArrowRight size={24} className="group-hover:translate-x-3 transition-transform" />}
             </button>
             
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-relaxed px-10">
