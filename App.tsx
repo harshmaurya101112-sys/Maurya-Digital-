@@ -1,5 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
+import { Auth0Provider, useAuth0 } from '@auth0/auth0-react';
+import { auth0Config } from './auth0-config';
 import { db, doc, onSnapshot, logoutUser, updateWalletOnDB, syncAuth0UserToFirebase } from './firebase';
 import { UserProfile } from './types';
 import AuthPage from './pages/Auth';
@@ -10,133 +12,134 @@ import ProfilePage from './pages/Profile';
 import AdminPage from './pages/Admin';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
-import { CheckCircle, ShieldCheck } from 'lucide-react';
+import { CheckCircle, ShieldCheck, AlertCircle, Settings, Loader2 } from 'lucide-react';
 
-const App: React.FC = () => {
+const MainApp: React.FC = () => {
+  const { user: auth0User, isAuthenticated, isLoading: authLoading, loginWithRedirect, logout: auth0Logout, error: auth0Error } = useAuth0();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [currentPage, setCurrentPage] = useState<string>(() => localStorage.getItem('maurya_last_page') || 'dashboard');
-  const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
   const [toast, setToast] = useState<{msg: string, type: 'success' | 'error'} | null>(null);
 
-  // Sync current page to localStorage
+  const isConfigMissing = !auth0Config.domain || !auth0Config.clientId;
+
   useEffect(() => {
     localStorage.setItem('maurya_last_page', currentPage);
   }, [currentPage]);
 
-  // Session Hydration: Ye refresh par logout hone se rokta hai
   useEffect(() => {
-    const savedUid = localStorage.getItem('maurya_active_uid');
-    let unsub: () => void = () => {};
-
-    if (savedUid) {
-      setLoading(true);
-      // Firebase real-time listener refresh par bhi user data recover kar leta hai
-      unsub = onSnapshot(doc(db, "users", savedUid), (snap) => {
-        if (snap.exists()) {
-          setUser(snap.data() as UserProfile);
-        } else {
-          localStorage.removeItem('maurya_active_uid');
-          setUser(null);
+    let unsubscribe: any;
+    const performSync = async () => {
+      if (isAuthenticated && auth0User) {
+        setSyncing(true);
+        try {
+          const profile = await syncAuth0UserToFirebase(auth0User);
+          if (profile) {
+            // Real-time listener for wallet balance
+            unsubscribe = onSnapshot(doc(db, "users", profile.uid), (doc) => {
+              if (doc.exists()) {
+                setUser(doc.data() as UserProfile);
+              }
+            });
+            localStorage.setItem('maurya_active_uid', profile.uid);
+          }
+        } catch (error: any) {
+          console.error("Firebase Sync Error:", error);
+          setSyncError(error.message || "Firebase Connection Failed");
+        } finally {
+          setSyncing(false);
         }
-        setLoading(false);
-      }, (err) => {
-        console.error("Auth Session Error:", err);
-        setLoading(false);
-      });
-    } else {
-      setLoading(false);
-    }
-    return () => unsub();
-  }, []);
-
-  const handleAuth0Login = async () => {
-    setLoading(true);
-    try {
-      // Simulation of Auth0 Sync (Real integration mein auth0.getUser() call hoga)
-      const mockAuth0User = {
-        email: 'harsh.maurya101112@gmail.com',
-        name: 'Harsh Maurya',
-        sub: 'auth0_harsh123',
-        picture: '' 
-      };
-      
-      const profile = await syncAuth0UserToFirebase(mockAuth0User);
-      if (profile) {
-        setUser(profile);
-        // CRITICAL: UID ko refresh ke liye save karna
-        localStorage.setItem('maurya_active_uid', profile.uid);
       }
-    } catch (error) {
-      showToast("Authentication Failed", "error");
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+    performSync();
+    return () => unsubscribe?.();
+  }, [isAuthenticated, auth0User]);
 
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type });
-    setTimeout(() => setToast(null), 3500);
+    setTimeout(() => setToast(null), 4000);
   };
 
   const handleLogout = async () => {
-    setLoading(true);
-    await logoutUser();
-    setUser(null);
     localStorage.removeItem('maurya_active_uid');
-    setLoading(false);
+    localStorage.removeItem('maurya_last_page');
+    auth0Logout({ logoutParams: { returnTo: window.location.origin } });
   };
 
-  if (loading) {
+  if (isConfigMissing) {
     return (
-      <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center p-6 text-center">
-        <div className="relative mb-8">
-          <div className="w-24 h-24 border-4 border-blue-500/10 border-t-blue-500 rounded-full animate-spin"></div>
-          <ShieldCheck className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-blue-500" size={32} />
-        </div>
-        <h2 className="text-xl font-black text-white uppercase tracking-widest animate-pulse">Maurya Secure Bridge</h2>
-        <p className="text-slate-500 text-[9px] font-black uppercase mt-2 tracking-[0.4em]">Restoring Merchant Session...</p>
+      <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center p-10 text-center">
+        <Settings className="text-orange-500 mb-6 animate-spin" size={64} />
+        <h2 className="text-2xl font-black text-white uppercase mb-4">Auth0 Config Missing</h2>
+        <p className="text-slate-400 text-sm max-w-md mb-8">Please add VITE_AUTH0_DOMAIN and VITE_AUTH0_CLIENT_ID in Vercel.</p>
       </div>
     );
   }
 
-  if (!user) {
-    return <AuthPage onAuthSuccess={handleAuth0Login} />;
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center p-6 text-center">
+        <Loader2 className="w-16 h-16 text-blue-500 animate-spin mb-6" />
+        <h2 className="text-white font-black uppercase tracking-widest text-xs animate-pulse">Checking Secure Session...</h2>
+      </div>
+    );
   }
 
-  return (
-    <div className="flex min-h-screen bg-slate-50 font-sans">
-      <Sidebar 
-        activePage={currentPage} 
-        onPageChange={setCurrentPage} 
-        isAdmin={user.isAdmin} 
-        onLogout={handleLogout}
-      />
-      <div className="flex-1 flex flex-col h-screen overflow-hidden">
-        <Header user={user} onPageChange={setCurrentPage} onLogout={handleLogout} />
-        <main className="flex-1 overflow-y-auto p-10 no-scrollbar bg-[#f8fafc]">
-          <div className="max-w-[1600px] mx-auto">
-            {currentPage === 'dashboard' && <Dashboard user={user} onPageChange={setCurrentPage} />}
-            {currentPage === 'services' && <ServicesPage user={user} onAction={async (amt, svc, type, pin) => {
-              try {
-                await updateWalletOnDB(user.uid, amt, svc, type, pin);
-                showToast(`Service Bridge Success: ${svc}`);
-              } catch (e: any) {
-                showToast(e.message, "error");
-              }
-            }} />}
-            {currentPage === 'wallet' && <WalletPage user={user} />}
-            {currentPage === 'profile' && <ProfilePage user={user} onNotify={showToast} />}
-            {currentPage === 'admin' && user.isAdmin && <AdminPage currentUser={user} onNotify={showToast} />}
-          </div>
-        </main>
+  if (isAuthenticated && (syncing || (!user && !syncError))) {
+    return (
+      <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center p-6 text-center">
+        <ShieldCheck className="w-16 h-16 text-blue-500 animate-bounce mb-6" />
+        <h2 className="text-xl font-black text-white uppercase tracking-widest">Digital Maurya Bridge</h2>
+        <p className="text-slate-500 text-[9px] font-black uppercase mt-2 tracking-[0.4em]">Synchronizing Merchant Identity...</p>
       </div>
-      {toast && (
-        <div className={`fixed top-12 left-1/2 -translate-x-1/2 px-12 py-6 rounded-[3rem] shadow-4xl font-black text-[11px] uppercase tracking-widest z-[3000] flex items-center gap-4 animate-in slide-in-from-top-12 ${toast.type === 'success' ? 'bg-blue-950 text-white shadow-blue-500/20' : 'bg-red-600 text-white shadow-red-500/20'}`}>
-          <CheckCircle size={20} /> {toast.msg}
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <AuthPage onAuthSuccess={() => loginWithRedirect()} />;
+  }
+
+  if (user) {
+    return (
+      <div className="flex min-h-screen bg-slate-50 font-sans">
+        <Sidebar activePage={currentPage} onPageChange={setCurrentPage} isAdmin={user.isAdmin} onLogout={handleLogout} />
+        <div className="flex-1 flex flex-col h-screen overflow-hidden">
+          <Header user={user} onPageChange={setCurrentPage} onLogout={handleLogout} />
+          <main className="flex-1 overflow-y-auto p-10 no-scrollbar bg-[#f8fafc]">
+            <div className="max-w-[1600px] mx-auto">
+              {currentPage === 'dashboard' && <Dashboard user={user} onPageChange={setCurrentPage} />}
+              {currentPage === 'services' && <ServicesPage user={user} onAction={async (amt, svc, type, pin) => {
+                try {
+                  await updateWalletOnDB(user.uid, amt, svc, type, pin);
+                  showToast(`Service Success: ${svc}`);
+                } catch (e: any) {
+                  showToast(e.message, "error");
+                }
+              }} />}
+              {currentPage === 'wallet' && <WalletPage user={user} />}
+              {currentPage === 'profile' && <ProfilePage user={user} onNotify={showToast} />}
+              {currentPage === 'admin' && user.isAdmin && <AdminPage currentUser={user} onNotify={showToast} />}
+            </div>
+          </main>
         </div>
-      )}
-    </div>
-  );
+        {toast && (
+          <div className={`fixed top-12 left-1/2 -translate-x-1/2 px-12 py-6 rounded-[3rem] shadow-4xl font-black text-[11px] uppercase tracking-widest z-[3000] flex items-center gap-4 animate-in slide-in-from-top-12 ${toast.type === 'success' ? 'bg-blue-950 text-white shadow-blue-500/20' : 'bg-red-600 text-white shadow-red-500/20'}`}>
+            {toast.type === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />} 
+            {toast.msg}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return null;
 };
+
+const App: React.FC = () => (
+  <Auth0Provider {...auth0Config}>
+    <MainApp />
+  </Auth0Provider>
+);
 
 export default App;
