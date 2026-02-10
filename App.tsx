@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
-import { Auth0Provider, useAuth0 } from '@auth0/auth0-react';
+import { Auth0Provider, useAuth0 } from 'https://esm.sh/@auth0/auth0-react@^2.2.4';
 import { auth0Config } from './auth0-config';
-import { db, doc, onSnapshot, logoutUser, updateWalletOnDB, syncAuth0UserToFirebase } from './firebase';
+import { db, doc, onSnapshot, updateWalletOnDB, syncAuth0UserToFirebase } from './firebase';
 import { UserProfile } from './types';
 import AuthPage from './pages/Auth';
 import Dashboard from './pages/Dashboard';
@@ -31,12 +31,13 @@ const MainApp: React.FC = () => {
   useEffect(() => {
     let unsubscribe: any;
     const performSync = async () => {
+      // Only sync if authenticated and we have the user object
       if (isAuthenticated && auth0User) {
         setSyncing(true);
         try {
           const profile = await syncAuth0UserToFirebase(auth0User);
           if (profile) {
-            // Real-time listener for wallet balance
+            // Real-time listener for profile and wallet balance updates
             unsubscribe = onSnapshot(doc(db, "users", profile.uid), (doc) => {
               if (doc.exists()) {
                 setUser(doc.data() as UserProfile);
@@ -69,37 +70,41 @@ const MainApp: React.FC = () => {
 
   if (isConfigMissing) {
     return (
-      <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center p-10 text-center">
+      <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center p-10 text-center text-white">
         <Settings className="text-orange-500 mb-6 animate-spin" size={64} />
-        <h2 className="text-2xl font-black text-white uppercase mb-4">Auth0 Config Missing</h2>
-        <p className="text-slate-400 text-sm max-w-md mb-8">Please add VITE_AUTH0_DOMAIN and VITE_AUTH0_CLIENT_ID in Vercel.</p>
+        <h2 className="text-2xl font-black uppercase mb-4">Auth0 Config Missing</h2>
+        <p className="text-slate-400 text-sm max-w-md mb-8 italic">Bhai, Vercel Environment Variables check karein.</p>
       </div>
     );
   }
 
+  // Handle Initial Auth Loading
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center p-6 text-center">
+      <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center p-6 text-center text-white">
         <Loader2 className="w-16 h-16 text-blue-500 animate-spin mb-6" />
-        <h2 className="text-white font-black uppercase tracking-widest text-xs animate-pulse">Checking Secure Session...</h2>
+        <h2 className="font-black uppercase tracking-widest text-xs animate-pulse">Establishing Secure Connection...</h2>
       </div>
     );
   }
 
+  // Handle Firebase Syncing
   if (isAuthenticated && (syncing || (!user && !syncError))) {
     return (
-      <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center p-6 text-center">
+      <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center p-6 text-center text-white">
         <ShieldCheck className="w-16 h-16 text-blue-500 animate-bounce mb-6" />
-        <h2 className="text-xl font-black text-white uppercase tracking-widest">Digital Maurya Bridge</h2>
-        <p className="text-slate-500 text-[9px] font-black uppercase mt-2 tracking-[0.4em]">Synchronizing Merchant Identity...</p>
+        <h2 className="text-xl font-black uppercase tracking-widest">Digital Maurya</h2>
+        <p className="text-slate-500 text-[9px] font-black uppercase mt-2 tracking-[0.4em]">Synchronizing Merchant Data...</p>
       </div>
     );
   }
 
+  // If not logged in, show AuthPage
   if (!isAuthenticated) {
     return <AuthPage onAuthSuccess={() => loginWithRedirect()} />;
   }
 
+  // If logged in and user data is synced
   if (user) {
     return (
       <div className="flex min-h-screen bg-slate-50 font-sans">
@@ -124,7 +129,7 @@ const MainApp: React.FC = () => {
           </main>
         </div>
         {toast && (
-          <div className={`fixed top-12 left-1/2 -translate-x-1/2 px-12 py-6 rounded-[3rem] shadow-4xl font-black text-[11px] uppercase tracking-widest z-[3000] flex items-center gap-4 animate-in slide-in-from-top-12 ${toast.type === 'success' ? 'bg-blue-950 text-white shadow-blue-500/20' : 'bg-red-600 text-white shadow-red-500/20'}`}>
+          <div className={`fixed top-12 left-1/2 -translate-x-1/2 px-12 py-6 rounded-[3rem] shadow-4xl font-black text-[11px] uppercase tracking-widest z-[3000] flex items-center gap-4 animate-in slide-in-from-top-12 ${toast.type === 'success' ? 'bg-blue-950 text-white' : 'bg-red-600 text-white'}`}>
             {toast.type === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />} 
             {toast.msg}
           </div>
