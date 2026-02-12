@@ -20,11 +20,11 @@ export const auth0Config: any = {
     redirect_uri: window.location.origin,
     scope: "openid profile email"
   },
-  // Cache in localstorage keeps session alive after refresh
+  // CRITICAL: This allows session to persist after refresh without 3rd party cookies
   cacheLocation: 'localstorage',
   useRefreshTokens: true,
-  // Required for cross-domain on some browsers
-  useRefreshTokensFallback: true
+  useRefreshTokensFallback: true,
+  legacySameSiteCookie: true
 };
 
 if (!cleanDomain || !rawClientId) {

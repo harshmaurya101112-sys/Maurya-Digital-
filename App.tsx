@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-// Direct URL imports ensure Vercel builds don't fail due to missing node_modules
-import { Auth0Provider, useAuth0 } from 'https://esm.sh/@auth0/auth0-react@2.2.4';
+// Force Auth0 to use the same React version to prevent "Invalid Hook Call" on refresh
+import { Auth0Provider, useAuth0 } from 'https://esm.sh/@auth0/auth0-react@2.2.4?deps=react@18.2.0,react-dom@18.2.0';
 import { auth0Config } from './auth0-config';
 import { db, doc, onSnapshot, updateWalletOnDB, syncAuth0UserToFirebase } from './firebase';
 import { UserProfile } from './types';
@@ -13,8 +13,6 @@ import ProfilePage from './pages/Profile';
 import AdminPage from './pages/Admin';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
-
-// Direct ESM import for Lucide icons to match the version exactly
 import { ShieldCheck, Settings, Loader2, AlertCircle } from 'https://esm.sh/lucide-react@0.263.1';
 
 const MainApp: React.FC = () => {
@@ -32,8 +30,8 @@ const MainApp: React.FC = () => {
   const [syncing, setSyncing] = useState(false);
   const [toast, setToast] = useState<{msg: string, type: 'success' | 'error'} | null>(null);
 
-  // Config Validation
-  const isConfigMissing = !auth0Config.domain || auth0Config.domain.includes('undefined') || !auth0Config.clientId;
+  // Validate Config
+  const isConfigMissing = !auth0Config.domain || auth0Config.domain === "" || !auth0Config.clientId;
 
   useEffect(() => {
     localStorage.setItem('maurya_last_page', currentPage);
@@ -42,7 +40,7 @@ const MainApp: React.FC = () => {
   useEffect(() => {
     let unsubscribe: any;
     const performSync = async () => {
-      // Refresh par isAuthenticated thodi der baad true hota hai, isliye SDK ka wait zaroori hai
+      // Refresh happens: isAuthenticated checks against localstorage first
       if (isAuthenticated && auth0User) {
         setSyncing(true);
         try {
@@ -75,66 +73,60 @@ const MainApp: React.FC = () => {
     auth0Logout({ logoutParams: { returnTo: window.location.origin } });
   };
 
-  // 1. Missing Keys Error (Prevents White Screen)
   if (isConfigMissing) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-10 text-center">
-        <div className="bg-white p-12 rounded-[3rem] border border-red-100 shadow-2xl max-w-md">
+      <div className="min-h-screen bg-slate-100 flex items-center justify-center p-6">
+        <div className="bg-white p-12 rounded-[3rem] shadow-2xl max-w-md text-center border-t-8 border-red-500">
           <Settings className="text-red-500 mb-6 mx-auto animate-spin" size={64} />
-          <h2 className="text-2xl font-black text-slate-900 uppercase mb-4 tracking-tighter">Gateway Config Error</h2>
+          <h2 className="text-2xl font-black text-slate-900 uppercase mb-4 tracking-tighter">Configuration Error</h2>
           <p className="text-slate-500 text-sm mb-8 font-medium italic">
-            Bhai, Vercel Dashboard mein Environment Variables (VITE_AUTH0_DOMAIN, VITE_AUTH0_CLIENT_ID) check karein.
+            VITE_AUTH0_DOMAIN or VITE_AUTH0_CLIENT_ID is missing.
           </p>
-          <div className="bg-red-50 p-4 rounded-2xl text-[10px] text-red-600 font-bold uppercase tracking-widest">
-            Fix required in Vercel Settings
-          </div>
         </div>
       </div>
     );
   }
 
-  // 2. SDK Loading (Refresh ke waqt ye dikhna chahiye)
+  // Refresh Loader
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
-        <div className="relative">
-          <div className="w-20 h-20 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-          <ShieldCheck className="absolute inset-0 m-auto text-blue-600" size={32} />
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center">
+        <div className="relative flex items-center justify-center">
+          <div className="w-24 h-24 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+          <ShieldCheck className="absolute text-blue-600" size={32} />
         </div>
-        <p className="mt-8 text-slate-400 font-black uppercase tracking-[0.3em] text-[10px]">Connecting to CSC Gateway...</p>
+        <div className="mt-8 text-center">
+          <h3 className="text-lg font-black text-blue-950 uppercase tracking-widest">MAURYA PORTAL</h3>
+          <p className="text-slate-400 font-bold uppercase tracking-[0.3em] text-[10px] mt-2 animate-pulse">Restoring Session...</p>
+        </div>
       </div>
     );
   }
 
-  // 3. Connection Error
   if (auth0Error) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
         <AlertCircle className="w-16 h-16 text-red-500 mb-6" />
-        <h2 className="text-xl font-black text-slate-900 uppercase">Handshake Failed</h2>
-        <p className="text-slate-500 text-xs mt-2">{auth0Error.message}</p>
-        <button onClick={() => window.location.reload()} className="mt-8 bg-blue-900 text-white px-10 py-4 rounded-full font-black uppercase text-[10px] tracking-widest shadow-xl shadow-blue-900/20">Retry Secure Link</button>
+        <h2 className="text-xl font-black text-slate-900 uppercase">Authentication Failure</h2>
+        <p className="text-slate-500 text-xs mt-2 max-w-sm mx-auto">{auth0Error.message}</p>
+        <button onClick={() => window.location.reload()} className="mt-8 bg-blue-900 text-white px-10 py-4 rounded-full font-black uppercase text-[10px] tracking-widest shadow-xl shadow-blue-900/20">Restart Application</button>
       </div>
     );
   }
 
-  // 4. If Not Logged In
   if (!isAuthenticated) {
     return <AuthPage onAuthSuccess={() => loginWithRedirect()} />;
   }
 
-  // 5. If Logged in but Syncing Data
   if (isAuthenticated && (syncing || !user)) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
         <Loader2 className="w-16 h-16 text-blue-600 animate-spin mb-6" />
-        <h2 className="text-xl font-black text-slate-900 uppercase tracking-widest">Merchant Data Sync</h2>
-        <p className="text-slate-400 text-[9px] font-black uppercase mt-2 tracking-[0.4em]">Fetching your wallet and services...</p>
+        <h2 className="text-xl font-black text-slate-900 uppercase tracking-widest">Loading Merchant Profile</h2>
       </div>
     );
   }
 
-  // 6. Main Portal UI
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans">
       <Sidebar activePage={currentPage} onPageChange={setCurrentPage} isAdmin={user?.isAdmin || false} onLogout={handleLogout} />
