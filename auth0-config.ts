@@ -1,28 +1,26 @@
-// Variables ko safely fetch karein
+// 1. Safe Variable Fetching
 const rawDomain = import.meta.env.VITE_AUTH0_DOMAIN || "";
 const rawClientId = import.meta.env.VITE_AUTH0_CLIENT_ID || "";
 
-// Safe domain cleaner - crash se bachne ke liye
-const getCleanDomain = (url: string) => {
-  if (!url) return "";
-  return url.replace(/^https?:\/\//, '').split('/')[0].trim();
-};
+// 2. Safe Cleaning (Agar variable khali hai toh crash nahi hoga)
+const cleanDomain = rawDomain 
+  ? rawDomain.replace(/^https?:\/\//, '').split('/')[0].trim() 
+  : "";
 
-export const auth0Config: any = {
-  domain: getCleanDomain(rawDomain),
+export const auth0Config = {
+  domain: cleanDomain,
   clientId: rawClientId.trim(),
   authorizationParams: {
-    // Mobile browsers ke liye safer approach
     redirect_uri: typeof window !== 'undefined' ? window.location.origin : '',
     scope: "openid profile email"
   },
-  cacheLocation: 'localstorage',
+  cacheLocation: 'localstorage' as const,
   useRefreshTokens: true,
   useRefreshTokensFallback: true,
 };
 
-// Console log sirf debug ke liye (Vercel logs mein dikhega)
-console.log("Auth0 Config Check:", { 
-  domain: !!auth0Config.domain, 
-  clientId: !!auth0Config.clientId 
-});
+// 3. Ye alert aapko mobile screen par dikhayega agar config khali hai
+if (typeof window !== 'undefined' && (!cleanDomain || !rawClientId)) {
+  console.error("AUTH0_ERROR: Config Missing");
+  // alert("Debug: Domain is " + (cleanDomain || "Empty") + " ClientId is " + (rawClientId || "Empty"));
+}
