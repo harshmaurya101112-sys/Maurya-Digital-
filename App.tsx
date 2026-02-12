@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { Auth0Provider, useAuth0 } from '@auth0/auth0-react';
+// Direct ESM import to fix Rollup resolution error
+import { Auth0Provider, useAuth0 } from 'https://esm.sh/@auth0/auth0-react@2.2.4';
 import { auth0Config } from './auth0-config';
 import { db, doc, onSnapshot, updateWalletOnDB, syncAuth0UserToFirebase } from './firebase';
 import { UserProfile } from './types';
@@ -65,10 +66,10 @@ const MainApp: React.FC = () => {
   if (isConfigMissing) {
     return (
       <div className="min-h-screen bg-[#f8fafc] flex flex-col items-center justify-center p-10 text-center">
-        <div className="bg-red-50 p-10 rounded-[3rem] border border-red-100 shadow-xl max-w-md">
+        <div className="bg-white p-10 rounded-[3rem] border border-red-100 shadow-2xl max-w-md">
           <Settings className="text-red-500 mb-6 mx-auto animate-spin" size={64} />
-          <h2 className="text-2xl font-black text-slate-900 uppercase mb-4">Auth0 Config Error</h2>
-          <p className="text-slate-500 text-sm mb-8">Bhai, Vercel Dashboard mein VITE_AUTH0_DOMAIN aur VITE_AUTH0_CLIENT_ID check karein.</p>
+          <h2 className="text-2xl font-black text-slate-900 uppercase mb-4 tracking-tighter">API Keys Required</h2>
+          <p className="text-slate-500 text-xs mb-8 font-medium">Bhai, Auth0 Domain aur Client ID empty hai. Please check your environment variables.</p>
         </div>
       </div>
     );
@@ -77,8 +78,11 @@ const MainApp: React.FC = () => {
   if (authLoading) {
     return (
       <div className="min-h-screen bg-[#f8fafc] flex flex-col items-center justify-center p-6 text-center">
-        <Loader2 className="w-16 h-16 text-blue-600 animate-spin mb-6" />
-        <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Authenticating with CSC Gateway...</p>
+        <div className="relative">
+          <div className="w-20 h-20 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+          <ShieldCheck className="absolute inset-0 m-auto text-blue-600" size={32} />
+        </div>
+        <p className="mt-8 text-slate-400 font-black uppercase tracking-[0.3em] text-[10px]">Verifying with Digital Maurya Gateway...</p>
       </div>
     );
   }
@@ -87,9 +91,9 @@ const MainApp: React.FC = () => {
     return (
       <div className="min-h-screen bg-[#f8fafc] flex flex-col items-center justify-center p-6 text-center">
         <AlertCircle className="w-16 h-16 text-red-500 mb-6" />
-        <h2 className="text-xl font-black text-slate-900 uppercase">Login Error</h2>
-        <p className="text-slate-500 text-xs mt-2">{auth0Error.message}</p>
-        <button onClick={() => window.location.reload()} className="mt-6 bg-blue-600 text-white px-8 py-3 rounded-full font-bold uppercase text-xs">Try Again</button>
+        <h2 className="text-xl font-black text-slate-900 uppercase">Gateway Timeout</h2>
+        <p className="text-slate-500 text-xs mt-2 italic">{auth0Error.message}</p>
+        <button onClick={() => window.location.reload()} className="mt-8 bg-blue-900 text-white px-10 py-4 rounded-full font-black uppercase text-[10px] tracking-widest shadow-xl shadow-blue-900/20">Retry Connection</button>
       </div>
     );
   }
@@ -101,9 +105,9 @@ const MainApp: React.FC = () => {
   if (isAuthenticated && (syncing || !user)) {
     return (
       <div className="min-h-screen bg-[#f8fafc] flex flex-col items-center justify-center p-6 text-center">
-        <ShieldCheck className="w-16 h-16 text-blue-600 animate-bounce mb-6" />
-        <h2 className="text-xl font-black text-slate-900 uppercase tracking-widest">Maurya Digital</h2>
-        <p className="text-slate-400 text-[9px] font-black uppercase mt-2 tracking-[0.4em]">Setting up your secure workspace...</p>
+        <Loader2 className="w-16 h-16 text-blue-600 animate-spin mb-6" />
+        <h2 className="text-xl font-black text-slate-900 uppercase tracking-widest">Merchant Data Sync</h2>
+        <p className="text-slate-400 text-[9px] font-black uppercase mt-2 tracking-[0.4em]">Almost there, bhai...</p>
       </div>
     );
   }
@@ -113,7 +117,7 @@ const MainApp: React.FC = () => {
       <Sidebar activePage={currentPage} onPageChange={setCurrentPage} isAdmin={user?.isAdmin || false} onLogout={handleLogout} />
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
         <Header user={user!} onPageChange={setCurrentPage} onLogout={handleLogout} />
-        <main className="flex-1 overflow-y-auto p-10 no-scrollbar bg-[#f1f5f9]">
+        <main className="flex-1 overflow-y-auto p-10 no-scrollbar bg-[#f8fafc]">
           <div className="max-w-[1600px] mx-auto">
             {currentPage === 'dashboard' && <Dashboard user={user!} onPageChange={setCurrentPage} />}
             {currentPage === 'services' && <ServicesPage user={user!} onAction={async (amt, svc, type, pin) => {
@@ -131,7 +135,7 @@ const MainApp: React.FC = () => {
         </main>
       </div>
       {toast && (
-        <div className={`fixed top-12 left-1/2 -translate-x-1/2 px-10 py-5 rounded-full shadow-2xl font-black text-[10px] uppercase tracking-widest z-[3000] flex items-center gap-3 animate-in slide-in-from-top-12 ${toast.type === 'success' ? 'bg-blue-900 text-white' : 'bg-red-600 text-white'}`}>
+        <div className={`fixed top-12 left-1/2 -translate-x-1/2 px-10 py-5 rounded-full shadow-4xl font-black text-[10px] uppercase tracking-widest z-[3000] flex items-center gap-3 animate-in slide-in-from-top-12 ${toast.type === 'success' ? 'bg-blue-900 text-white' : 'bg-red-600 text-white'}`}>
           {toast.msg}
         </div>
       )}
