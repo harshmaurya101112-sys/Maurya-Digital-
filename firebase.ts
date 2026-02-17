@@ -1,6 +1,13 @@
 
 import { initializeApp } from 'https://esm.sh/firebase@10.7.1/app';
-import { getAuth, signOut } from 'https://esm.sh/firebase@10.7.1/auth';
+import { 
+  getAuth, 
+  signOut, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  onAuthStateChanged,
+  updateProfile
+} from 'https://esm.sh/firebase@10.7.1/auth';
 import { 
   getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, 
   collection, query, addDoc, getDocs, deleteDoc, where 
@@ -16,50 +23,42 @@ const firebaseConfig = {
   appId: (import.meta as any).env.VITE_FIREBASE_APP_ID
 };
 
-// Check if config is loaded
-if (!firebaseConfig.apiKey) {
-  console.error("Firebase API Key missing! Check Vercel Environment Variables.");
-}
-
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
 const MASTER_ADMIN_EMAIL = 'harsh.maurya101112@gmail.com';
 
-export const syncAuth0UserToFirebase = async (auth0User: any) => {
-  if (!auth0User) return null;
+export const syncUserToFirestore = async (firebaseUser: any) => {
+  if (!firebaseUser) return null;
   
   try {
-    const cleanEmail = auth0User.email.toLowerCase().trim();
-    const userId = auth0User.sub || cleanEmail.replace(/[@.]/g, '_');
+    const cleanEmail = firebaseUser.email.toLowerCase().trim();
+    const userId = firebaseUser.uid;
     const userRef = doc(db, "users", userId);
     const snap = await getDoc(userRef);
     
     const isAdmin = cleanEmail === MASTER_ADMIN_EMAIL;
     
-    const profileData: any = {
-      uid: userId,
-      email: cleanEmail,
-      displayName: auth0User.name || 'Merchant Partner',
-      photoURL: auth0User.picture || '',
-      isAdmin: isAdmin,
-    };
-
     if (!snap.exists()) {
       const newProfile: UserProfile = {
-        ...profileData,
+        uid: userId,
+        email: cleanEmail,
+        displayName: firebaseUser.displayName || 'Merchant Partner',
+        photoURL: firebaseUser.photoURL || '',
+        isAdmin: isAdmin,
         walletBalance: 0,
         createdAt: new Date().toISOString()
       };
       await setDoc(userRef, newProfile);
       return newProfile;
     } else {
-      await updateDoc(userRef, profileData);
-      return { ...snap.data(), ...profileData } as UserProfile;
+      // Refresh admin status just in case
+      await updateDoc(userRef, { isAdmin });
+      return { ...snap.data(), isAdmin } as UserProfile;
     }
   } catch (err) {
-    console.error("Firebase Sync Error Detail:", err);
+    console.error("Firestore Sync Error:", err);
     throw err;
   }
 };
@@ -98,6 +97,11 @@ export const adminUpdateUser = async (uid: string, data: any) => {
   await updateDoc(doc(db, "users", uid), data);
 };
 
+// Added deleteUserDB to resolve import error in Admin.tsx
+export const deleteUserDB = async (uid: string) => {
+  await deleteDoc(doc(db, "users", uid));
+};
+
 export const processSecurePayment = async (amount: number) => {
   await new Promise(res => setTimeout(res, 1500));
   return true;
@@ -107,8 +111,20 @@ export const setWalletPinDB = async (uid: string, pin: string) => {
   await updateDoc(doc(db, "users", uid), { walletPin: pin });
 };
 
-export const deleteUserDB = async (uid: string) => {
-  await deleteDoc(doc(db, "users", uid));
+export { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  onAuthStateChanged,
+  updateProfile,
+  doc, 
+  onSnapshot, 
+  collection, 
+  query, 
+  where, 
+  getDoc, 
+  getDocs, 
+  setDoc, 
+  addDoc, 
+  deleteDoc, 
+  updateDoc 
 };
-
-export { doc, onSnapshot, collection, query, where, getDoc, getDocs, setDoc, addDoc, deleteDoc, updateDoc };

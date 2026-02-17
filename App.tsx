@@ -1,8 +1,15 @@
 
 import React, { useState, useEffect } from 'react';
-import { Auth0Provider, useAuth0 } from 'https://esm.sh/@auth0/auth0-react@2.2.4?deps=react@18.2.0,react-dom@18.2.0';
-import { auth0Config } from './auth0-config';
-import { db, doc, onSnapshot, updateWalletOnDB, syncAuth0UserToFirebase } from './firebase';
+import { 
+  auth, 
+  db, 
+  doc, 
+  onSnapshot, 
+  onAuthStateChanged, 
+  syncUserToFirestore, 
+  updateWalletOnDB, 
+  logoutUser 
+} from './firebase';
 import { UserProfile } from './types';
 import AuthPage from './pages/Auth';
 import Dashboard from './pages/Dashboard';
@@ -12,21 +19,13 @@ import ProfilePage from './pages/Profile';
 import AdminPage from './pages/Admin';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
-import { ShieldCheck, Settings, Loader2, AlertCircle } from 'lucide-react';
+import { ShieldCheck, Loader2 } from 'lucide-react';
 
 const MainApp: React.FC = () => {
-  const { 
-    user: auth0User, 
-    isAuthenticated, 
-    isLoading: authLoading, 
-    loginWithRedirect, 
-    logout: auth0Logout, 
-    error: auth0Error 
-  } = useAuth0();
-
+  const [firebaseUser, setFirebaseUser] = useState<any>(null);
   const [user, setUser] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState<string>(() => localStorage.getItem('maurya_last_page') || 'dashboard');
-  const [syncing, setSyncing] = useState(false);
   const [toast, setToast] = useState<{msg: string, type: 'success' | 'error'} | null>(null);
 
   useEffect(() => {
@@ -34,54 +33,49 @@ const MainApp: React.FC = () => {
   }, [currentPage]);
 
   useEffect(() => {
-    let unsubscribe: any;
-    const performSync = async () => {
-      // Logic: Wait until Auth0 says it's definitely authenticated
-      if (isAuthenticated && auth0User) {
-        setSyncing(true);
+    const unsubscribeAuth = onAuthStateChanged(auth, async (fUser) => {
+      setFirebaseUser(fUser);
+      if (fUser) {
         try {
-          const profile = await syncAuth0UserToFirebase(auth0User);
+          const profile = await syncUserToFirestore(fUser);
           if (profile) {
-            unsubscribe = onSnapshot(doc(db, "users", profile.uid), (doc) => {
+            // Listen for real-time changes to the user document
+            const unsubDoc = onSnapshot(doc(db, "users", profile.uid), (doc) => {
               if (doc.exists()) {
                 setUser(doc.data() as UserProfile);
               }
+              setLoading(false);
             });
+            return () => unsubDoc();
           }
         } catch (error) {
-          console.error("Firebase Sync Error:", error);
-        } finally {
-          setSyncing(false);
+          console.error("App Sync Error:", error);
+          setLoading(false);
         }
+      } else {
+        setUser(null);
+        setLoading(false);
       }
-    };
-    performSync();
-    return () => unsubscribe?.();
-  }, [isAuthenticated, auth0User]);
+    });
+
+    return () => unsubscribeAuth();
+  }, []);
 
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 4000);
   };
 
-  const handleLogout = () => {
-    localStorage.clear();
-    auth0Logout({ logoutParams: { returnTo: window.location.origin } });
+  const handleLogout = async () => {
+    try {
+      localStorage.clear();
+      await logoutUser();
+    } catch (err) {
+      console.error("Logout error", err);
+    }
   };
 
-  // 1. Config Check
-  if (!auth0Config.domain || !auth0Config.clientId) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-12 text-center">
-        <Settings className="text-red-500 mb-6 animate-spin" size={64} />
-        <h2 className="text-2xl font-black text-slate-900 uppercase mb-4 tracking-tighter">API Keys Missing</h2>
-        <p className="text-slate-500 text-sm max-w-sm">Please ensure VITE_AUTH0_DOMAIN and VITE_AUTH0_CLIENT_ID are set in Vercel environment variables.</p>
-      </div>
-    );
-  }
-
-  // 2. Refresh handling - This is where the white screen happens if not handled
-  if (authLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-white flex flex-col items-center justify-center">
         <div className="relative flex items-center justify-center">
@@ -96,33 +90,20 @@ const MainApp: React.FC = () => {
     );
   }
 
-  if (auth0Error) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
-        <AlertCircle className="w-16 h-16 text-red-500 mb-6" />
-        <h2 className="text-xl font-black text-slate-900 uppercase tracking-tighter">Auth Link Broken</h2>
-        <p className="text-slate-500 text-xs mt-2 max-w-sm mx-auto">{auth0Error.message}</p>
-        <button onClick={() => window.location.reload()} className="mt-8 bg-blue-950 text-white px-10 py-4 rounded-full font-black uppercase text-[10px] tracking-widest shadow-xl">Retry Connection</button>
-      </div>
-    );
+  if (!firebaseUser) {
+    return <AuthPage onNotify={showToast} />;
   }
 
-  // 3. Not Logged In
-  if (!isAuthenticated) {
-    return <AuthPage onAuthSuccess={() => loginWithRedirect()} />;
-  }
-
-  // 4. Final Data Syncing
-  if (isAuthenticated && (syncing || !user)) {
+  // Waiting for Firestore profile to load after Auth succeeds
+  if (!user) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
         <Loader2 className="w-16 h-16 text-blue-600 animate-spin mb-6" />
-        <h2 className="text-xl font-black text-slate-900 uppercase tracking-widest">Merchant Data Sync</h2>
+        <h2 className="text-xl font-black text-slate-900 uppercase tracking-widest">Syncing Merchant Identity...</h2>
       </div>
     );
   }
 
-  // 5. Success
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans">
       <Sidebar activePage={currentPage} onPageChange={setCurrentPage} isAdmin={user?.isAdmin || false} onLogout={handleLogout} />
@@ -154,10 +135,6 @@ const MainApp: React.FC = () => {
   );
 };
 
-const App: React.FC = () => (
-  <Auth0Provider {...auth0Config}>
-    <MainApp />
-  </Auth0Provider>
-);
+const App: React.FC = () => <MainApp />;
 
 export default App;
