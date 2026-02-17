@@ -1,18 +1,46 @@
 
 import React, { useState } from 'react';
-import { ShieldCheck, ArrowRight, Lock, Globe, Loader2, Landmark, CheckCircle } from 'lucide-react';
+import { ShieldCheck, ArrowRight, Lock, Globe, Loader2, Landmark, CheckCircle, Mail, User, AlertCircle } from 'lucide-react';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, auth } from '../firebase';
 
-const AuthPage: React.FC<{onAuthSuccess: () => void}> = ({ onAuthSuccess }) => {
+const AuthPage: React.FC<{onNotify: (m: string, t: 'success' | 'error') => void}> = ({ onNotify }) => {
   const [loading, setLoading] = useState(false);
+  const [isLogin, setIsLogin] = useState(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [error, setError] = useState('');
 
-  const handleLogin = () => {
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
     setLoading(true);
-    onAuthSuccess();
+    setError('');
+
+    try {
+      if (isLogin) {
+        await signInWithEmailAndPassword(auth, email, password);
+        onNotify('Welcome Back!', 'success');
+      } else {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        await updateProfile(userCredential.user, { displayName: name });
+        onNotify('Account Created Successfully!', 'success');
+      }
+    } catch (err: any) {
+      console.error(err);
+      let msg = "An error occurred";
+      if (err.code === 'auth/user-not-found') msg = "User not found";
+      if (err.code === 'auth/wrong-password') msg = "Incorrect password";
+      if (err.code === 'auth/email-already-in-use') msg = "Email already registered";
+      if (err.code === 'auth/invalid-email') msg = "Invalid email format";
+      setError(msg);
+      onNotify(msg, 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-[#f8fafc] flex flex-col font-sans">
-      {/* CSC Style Top Header */}
       <div className="bg-[#020617] text-white px-6 py-2 flex justify-between items-center text-[9px] font-black uppercase tracking-[0.2em]">
         <div className="flex gap-6">
           <span>Official Portal: Digital Maurya Seva</span>
@@ -20,7 +48,7 @@ const AuthPage: React.FC<{onAuthSuccess: () => void}> = ({ onAuthSuccess }) => {
         </div>
         <div className="flex gap-4">
           <span className="flex items-center gap-1"><Globe size={10} /> English / Hindi</span>
-          <span className="hidden md:block">Helpline: 1800-XXX-XXXX</span>
+          <span className="hidden md:block">Security Level: High</span>
         </div>
       </div>
 
@@ -34,96 +62,106 @@ const AuthPage: React.FC<{onAuthSuccess: () => void}> = ({ onAuthSuccess }) => {
             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">Apna CSC Seva Kendra</p>
           </div>
         </div>
-        <div className="flex gap-8 items-center">
-          <img src="https://upload.wikimedia.org/wikipedia/en/thumb/9/95/Digital_India_logo.svg/1200px-Digital_India_logo.svg.png" className="h-12 opacity-80" alt="Digital India" />
-          <div className="hidden lg:block h-10 w-[1px] bg-slate-200"></div>
-          <div className="hidden lg:flex flex-col items-end">
-             <span className="text-[10px] font-black text-blue-900 uppercase">Government Gateway</span>
-             <span className="text-[10px] font-bold text-slate-400 uppercase">V 4.0.5 Security</span>
-          </div>
-        </div>
+        <img src="https://upload.wikimedia.org/wikipedia/en/thumb/9/95/Digital_India_logo.svg/1200px-Digital_India_logo.svg.png" className="h-10 opacity-80 hidden md:block" alt="Digital India" />
       </header>
 
-      <main className="flex-1 flex items-center justify-center p-6 md:p-12 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed">
-        <div className="max-w-5xl w-full grid grid-cols-1 lg:grid-cols-2 bg-white rounded-[4rem] shadow-4xl overflow-hidden border border-slate-100 relative">
+      <main className="flex-1 flex items-center justify-center p-6 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed">
+        <div className="max-w-4xl w-full grid grid-cols-1 lg:grid-cols-2 bg-white rounded-[3rem] shadow-4xl overflow-hidden border border-slate-100">
           
-          {/* CSC Blue Side */}
-          <div className="bg-blue-900 p-16 text-white flex flex-col justify-between relative overflow-hidden">
-            <div className="relative z-10">
-              <span className="inline-block bg-orange-600 text-[10px] font-black uppercase px-5 py-2 rounded-full mb-8 tracking-widest shadow-xl">Secure Merchant Node</span>
-              <h2 className="text-5xl font-black uppercase tracking-tighter leading-[0.9] mb-8">Access Digital Services Instantly</h2>
-              <p className="text-blue-100/70 text-sm font-medium leading-relaxed max-w-sm">Connect with 200+ Government and Utility portals through our authorized merchant bridge.</p>
-              
-              <div className="mt-12 space-y-6">
-                {[
-                  {icon: <CheckCircle className="text-orange-400" />, text: "Real-time Wallet Settlement"},
-                  {icon: <CheckCircle className="text-orange-400" />, text: "One-Click Form Auto-Fill"},
-                  {icon: <CheckCircle className="text-orange-400" />, text: "Encrypted Data Handshake"}
-                ].map((item, idx) => (
-                  <div key={idx} className="flex items-center gap-4 group">
-                    <div className="bg-white/10 p-2 rounded-xl group-hover:bg-white/20 transition-all">{item.icon}</div>
-                    <span className="text-xs font-black uppercase tracking-widest">{item.text}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Background Decor */}
-            <div className="absolute -bottom-10 -left-10 w-64 h-64 bg-white/5 rounded-full blur-[80px]"></div>
-            <div className="absolute top-0 right-0 w-80 h-80 bg-orange-600/10 rounded-full blur-[100px] translate-x-1/2 -translate-y-1/2"></div>
+          <div className="bg-blue-900 p-12 text-white flex flex-col justify-center relative overflow-hidden">
+             <div className="relative z-10">
+               <span className="bg-orange-600 text-[9px] font-black uppercase px-4 py-1.5 rounded-full mb-6 inline-block tracking-widest">Authorized Access</span>
+               <h2 className="text-4xl font-black uppercase tracking-tighter leading-none mb-6">Partner With India's Digital Mission</h2>
+               <p className="text-blue-200 text-xs font-medium leading-relaxed max-w-xs opacity-70">Join thousands of VLEs providing 200+ essential services to citizens across the nation.</p>
+               
+               <div className="mt-10 space-y-4">
+                 <div className="flex items-center gap-3">
+                   <CheckCircle className="text-orange-400" size={16} />
+                   <span className="text-[10px] font-black uppercase tracking-widest">Real-time Wallet Settlement</span>
+                 </div>
+                 <div className="flex items-center gap-3">
+                   <CheckCircle className="text-orange-400" size={16} />
+                   <span className="text-[10px] font-black uppercase tracking-widest">G2C Service Access</span>
+                 </div>
+               </div>
+             </div>
+             <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-white/5 rounded-full blur-3xl"></div>
           </div>
 
-          {/* Login Action Side */}
-          <div className="p-16 flex flex-col justify-center items-center text-center">
-            <div className="bg-slate-50 w-28 h-28 rounded-[3rem] flex items-center justify-center text-blue-900 mb-8 border border-slate-100 shadow-inner group transition-all hover:scale-105">
-              <ShieldCheck size={56} className="group-hover:rotate-12 transition-transform" />
+          <div className="p-12 flex flex-col justify-center">
+            <div className="mb-10">
+              <h3 className="text-2xl font-black text-blue-950 uppercase tracking-tight">{isLogin ? 'VLE Login' : 'Register Partner'}</h3>
+              <p className="text-slate-400 font-bold uppercase text-[9px] tracking-widest mt-1">Official Merchant Gateway</p>
             </div>
-            <h3 className="text-3xl font-black text-slate-900 uppercase tracking-tight mb-2 leading-none">VLE Login</h3>
-            <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.2em] mb-12">Authorized Personnel Access Only</p>
 
-            <div className="w-full space-y-4">
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-2xl flex items-center gap-3 text-red-600 text-[10px] font-black uppercase animate-shake">
+                <AlertCircle size={14} /> {error}
+              </div>
+            )}
+
+            <form onSubmit={handleAuth} className="space-y-4">
+              {!isLogin && (
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">Full Name</label>
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <input 
+                      type="text" required placeholder="Enter Legal Name"
+                      className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                      value={name} onChange={e => setName(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">Email Address</label>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <input 
+                    type="email" required placeholder="name@example.com"
+                    className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                    value={email} onChange={e => setEmail(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">Secure Password</label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <input 
+                    type="password" required placeholder="••••••••"
+                    className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                    value={password} onChange={e => setPassword(e.target.value)}
+                  />
+                </div>
+              </div>
+
               <button 
-                onClick={handleLogin}
-                disabled={loading}
-                className="w-full bg-blue-900 hover:bg-black text-white py-8 rounded-[2.5rem] font-black text-lg uppercase flex items-center justify-center gap-6 shadow-3xl shadow-blue-900/20 transition-all hover:translate-y-[-4px] active:scale-95 group disabled:opacity-70"
+                type="submit" disabled={loading}
+                className="w-full bg-blue-900 hover:bg-black text-white py-5 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 transition-all shadow-xl shadow-blue-900/10 disabled:opacity-50 mt-4 group"
               >
-                {loading ? <Loader2 className="animate-spin" size={28} /> : <Lock size={24} />}
-                {loading ? 'Authorizing...' : 'Connect to Gateway'}
-                {!loading && <ArrowRight size={24} className="group-hover:translate-x-2 transition-transform" />}
+                {loading ? <Loader2 className="animate-spin" size={18} /> : (isLogin ? 'Connect Gateway' : 'Create Account')}
+                {!loading && <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />}
               </button>
-              
-              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Forgot Security PIN? Contact Admin</p>
-            </div>
+            </form>
 
-            <div className="mt-16 flex flex-col items-center gap-4">
-               <div className="flex -space-x-3">
-                 {[1,2,3,4].map(i => (
-                   <div key={i} className="w-8 h-8 rounded-full border-2 border-white bg-slate-100 overflow-hidden shadow-md">
-                     <img src={`https://i.pravatar.cc/100?img=${i+10}`} className="w-full h-full object-cover grayscale opacity-50" />
-                   </div>
-                 ))}
-               </div>
-               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Join 500+ Active Merchants</p>
+            <div className="mt-8 text-center">
+              <button 
+                onClick={() => setIsLogin(!isLogin)}
+                className="text-[9px] font-black text-blue-900 uppercase tracking-widest hover:underline"
+              >
+                {isLogin ? "Don't have an account? Register Now" : "Already a partner? Login here"}
+              </button>
             </div>
           </div>
         </div>
       </main>
 
-      <footer className="bg-white border-t border-slate-200 p-8 flex flex-col md:flex-row justify-between items-center gap-8 text-center md:text-left">
-        <div className="space-y-2">
-          <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">© 2025 DIGITAL MAURYA. ALL RIGHTS RESERVED.</p>
-          <p className="text-[9px] font-bold text-slate-400 uppercase leading-relaxed">Powered by MeitY - Authorized Service Provider Bridge v4.0</p>
-        </div>
-        <div className="flex gap-12">
-          <div className="text-center">
-            <p className="text-[10px] font-black text-blue-900 uppercase">100% Secure</p>
-            <p className="text-[8px] font-bold text-slate-400 uppercase">AES-256 Encryption</p>
-          </div>
-          <div className="text-center">
-            <p className="text-[10px] font-black text-blue-900 uppercase">ISO Certified</p>
-            <p className="text-[8px] font-bold text-slate-400 uppercase">Govt Standards</p>
-          </div>
-        </div>
+      <footer className="p-8 text-center text-slate-400">
+        <p className="text-[9px] font-black uppercase tracking-[0.2em]">© 2025 DIGITAL MAURYA. ALL RIGHTS RESERVED.</p>
       </footer>
     </div>
   );
