@@ -37,8 +37,10 @@ const AdminPage: React.FC<{currentUser: UserProfile, onNotify: (m: string, type?
     setProcessing(true);
     try {
       const updatedCreds = { ...editingUser.serviceCredentials };
-      if (tempSvcId) {
-        updatedCreds['up_edistrict'] = { id: tempSvcId, pass: tempSvcPass };
+      if (tempSvcId.trim()) {
+        updatedCreds['up_edistrict'] = { id: tempSvcId.trim(), pass: tempSvcPass.trim() };
+      } else {
+        delete updatedCreds['up_edistrict'];
       }
 
       await adminUpdateUser(editingUser.uid, {
@@ -104,13 +106,19 @@ const AdminPage: React.FC<{currentUser: UserProfile, onNotify: (m: string, type?
                     <div className="text-[9px] text-slate-400">{u.email}</div>
                   </td>
                   <td className="px-10 py-6 text-center font-black text-xs">₹{u.walletBalance}</td>
-                  <td className="px-10 py-6 text-right">
+                  <td className="px-10 py-6 text-right flex justify-end gap-2">
                     <button onClick={() => {
                       setEditingUser(u);
                       setTempSvcId(u.serviceCredentials?.['up_edistrict']?.id || '');
                       setTempSvcPass(u.serviceCredentials?.['up_edistrict']?.pass || '');
                     }} className="p-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-900 hover:text-white transition-all">
                       <Edit size={16} />
+                    </button>
+                    <button 
+                      onClick={() => setShowDeleteConfirm(u.uid)}
+                      className="p-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-600 hover:text-white transition-all"
+                    >
+                      <Trash2 size={16} />
                     </button>
                   </td>
                 </tr>
@@ -144,9 +152,18 @@ const AdminPage: React.FC<{currentUser: UserProfile, onNotify: (m: string, type?
 
               {/* Service Credentials Section */}
               <div className="p-8 bg-blue-50 rounded-[2.5rem] border border-blue-100 space-y-4">
-                <h4 className="text-[10px] font-black text-blue-900 uppercase tracking-widest flex items-center gap-2">
-                  <Key size={14} /> Portal Credentials (SSO Emulation)
-                </h4>
+                <div className="flex justify-between items-center">
+                  <h4 className="text-[10px] font-black text-blue-900 uppercase tracking-widest flex items-center gap-2">
+                    <Key size={14} /> Portal Credentials (SSO Emulation)
+                  </h4>
+                  <button 
+                    type="button"
+                    onClick={() => { setTempSvcId(''); setTempSvcPass(''); }}
+                    className="text-[8px] font-black text-red-500 uppercase tracking-widest hover:underline"
+                  >
+                    Clear Credentials
+                  </button>
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <label className="text-[9px] font-black text-blue-400 uppercase ml-2">UP e-District ID</label>
@@ -165,6 +182,45 @@ const AdminPage: React.FC<{currentUser: UserProfile, onNotify: (m: string, type?
                 {processing ? <Loader2 className="animate-spin" size={18} /> : "Update Merchant Profile"}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-[700] bg-black/60 backdrop-blur-sm flex items-center justify-center p-6">
+          <div className="bg-white max-w-md w-full rounded-[3rem] p-10 shadow-4xl text-center">
+            <div className="bg-red-50 w-20 h-20 rounded-full flex items-center justify-center text-red-600 mx-auto mb-6">
+              <AlertTriangle size={40} />
+            </div>
+            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight mb-2">Delete Merchant?</h3>
+            <p className="text-slate-500 text-xs font-bold mb-8">This action is permanent. All wallet data and history for this user will be lost.</p>
+            
+            <div className="flex gap-4">
+              <button 
+                onClick={() => setShowDeleteConfirm(null)}
+                className="flex-1 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-all"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={async () => {
+                  setProcessing(true);
+                  try {
+                    await deleteUserDB(showDeleteConfirm);
+                    onNotify("Merchant Deleted Successfully");
+                    setShowDeleteConfirm(null);
+                  } catch (e: any) {
+                    onNotify("Delete Error: " + e.message, "error");
+                  } finally {
+                    setProcessing(false);
+                  }
+                }}
+                disabled={processing}
+                className="flex-1 py-4 bg-red-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-black transition-all shadow-xl shadow-red-600/20 flex items-center justify-center gap-2"
+              >
+                {processing ? <Loader2 className="animate-spin" size={14} /> : "Delete Now"}
+              </button>
+            </div>
           </div>
         </div>
       )}
