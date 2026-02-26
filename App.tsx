@@ -20,18 +20,36 @@ import ProfilePage from './pages/Profile';
 import AdminPage from './pages/Admin';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
-import { ShieldCheck, Loader2 } from 'lucide-react';
+import PinSetup from './components/PinSetup';
+import { ShieldCheck, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 
 const MainApp: React.FC = () => {
   const [firebaseUser, setFirebaseUser] = useState<any>(null);
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [syncError, setSyncError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState<string>(() => localStorage.getItem('maurya_last_page') || 'dashboard');
   const [toast, setToast] = useState<{msg: string, type: 'success' | 'error'} | null>(null);
 
   useEffect(() => {
     localStorage.setItem('maurya_last_page', currentPage);
   }, [currentPage]);
+
+  const startSync = async (fUser: any) => {
+    setSyncError(null);
+    try {
+      const profile = await syncUserToFirestore(fUser);
+      if (profile) {
+        setUser(profile);
+        return profile;
+      }
+    } catch (error: any) {
+      console.error("App Sync Error:", error);
+      setSyncError(error.message || "Failed to sync merchant profile");
+      setLoading(false);
+    }
+    return null;
+  };
 
   useEffect(() => {
     if (!isConfigValid) {
@@ -42,7 +60,6 @@ const MainApp: React.FC = () => {
     let unsubDoc: (() => void) | null = null;
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (fUser) => {
-      // Cleanup previous doc listener if any
       if (unsubDoc) {
         unsubDoc();
         unsubDoc = null;
@@ -51,27 +68,18 @@ const MainApp: React.FC = () => {
       setFirebaseUser(fUser);
       
       if (fUser) {
-        try {
-          const profile = await syncUserToFirestore(fUser);
-          if (profile) {
-            setUser(profile); // Set initial profile immediately
-            
-            // Listen for real-time changes to the user document
-            unsubDoc = onSnapshot(doc(db, "users", profile.uid), (snapshot) => {
-              if (snapshot.exists()) {
-                setUser(snapshot.data() as UserProfile);
-              }
-              setLoading(false);
-            }, (error) => {
-              console.error("Firestore Snapshot Error:", error);
-              setLoading(false);
-            });
-          } else {
+        const profile = await startSync(fUser);
+        if (profile) {
+          unsubDoc = onSnapshot(doc(db, "users", profile.uid), (snapshot) => {
+            if (snapshot.exists()) {
+              setUser(snapshot.data() as UserProfile);
+            }
             setLoading(false);
-          }
-        } catch (error) {
-          console.error("App Sync Error:", error);
-          setLoading(false);
+          }, (error) => {
+            console.error("Firestore Snapshot Error:", error);
+            setSyncError("Real-time sync lost. Please check connection.");
+            setLoading(false);
+          });
         }
       } else {
         setUser(null);
@@ -138,7 +146,30 @@ const MainApp: React.FC = () => {
     return <AuthPage onNotify={showToast} />;
   }
 
-  // Waiting for Firestore profile to load after Auth succeeds
+  if (syncError) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
+        <div className="bg-red-50 p-6 rounded-full mb-6">
+          <AlertCircle className="w-12 h-12 text-red-600" />
+        </div>
+        <h2 className="text-xl font-black text-slate-900 uppercase tracking-widest mb-2">Sync Failed</h2>
+        <p className="text-slate-500 text-sm mb-8 max-w-xs">{syncError}</p>
+        <button 
+          onClick={() => startSync(firebaseUser)}
+          className="flex items-center gap-2 bg-blue-900 text-white px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-black transition-all"
+        >
+          <RefreshCw size={14} /> Retry Sync
+        </button>
+        <button 
+          onClick={handleLogout}
+          className="mt-4 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-red-600 transition-all"
+        >
+          Sign Out
+        </button>
+      </div>
+    );
+  }
+
   if (!user) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
@@ -146,6 +177,11 @@ const MainApp: React.FC = () => {
         <h2 className="text-xl font-black text-slate-900 uppercase tracking-widest">Syncing Merchant Identity...</h2>
       </div>
     );
+  }
+
+  // Force PIN Setup if not set or default
+  if (!user.walletPin || user.walletPin === '0000') {
+    return <PinSetup uid={user.uid} onComplete={() => showToast('Wallet PIN Activated!', 'success')} />;
   }
 
   return (

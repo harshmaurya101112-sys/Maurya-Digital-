@@ -58,8 +58,7 @@ export const syncUserToFirestore = async (firebaseUser: any) => {
         photoURL: firebaseUser.photoURL || '',
         isAdmin: isAdmin,
         walletBalance: 0,
-        createdAt: new Date().toISOString(),
-        walletPin: '0000' // Default PIN for new users
+        createdAt: new Date().toISOString()
       };
       await setDoc(userRef, newProfile);
       return newProfile;
