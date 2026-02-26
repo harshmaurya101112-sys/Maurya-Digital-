@@ -1,5 +1,5 @@
 
-import { initializeApp } from 'https://esm.sh/firebase@10.7.1/app';
+import { initializeApp } from 'firebase/app';
 import { 
   getAuth, 
   signOut, 
@@ -7,11 +7,11 @@ import {
   createUserWithEmailAndPassword, 
   onAuthStateChanged,
   updateProfile
-} from 'https://esm.sh/firebase@10.7.1/auth';
+} from 'firebase/auth';
 import { 
   getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, 
   collection, query, addDoc, getDocs, deleteDoc, where 
-} from 'https://esm.sh/firebase@10.7.1/firestore';
+} from 'firebase/firestore';
 import { UserProfile } from './types';
 
 const firebaseConfig = {
@@ -23,9 +23,17 @@ const firebaseConfig = {
   appId: (import.meta as any).env.VITE_FIREBASE_APP_ID
 };
 
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const db = getFirestore(app);
+// Validate config before initializing
+const isConfigValid = !!firebaseConfig.apiKey && !!firebaseConfig.projectId;
+
+if (!isConfigValid) {
+  console.warn("Firebase configuration is missing. Please set VITE_FIREBASE_API_KEY and VITE_FIREBASE_PROJECT_ID in your environment.");
+}
+
+const app = isConfigValid ? initializeApp(firebaseConfig) : null;
+export const auth = app ? getAuth(app) : ({} as any);
+export const db = app ? getFirestore(app) : ({} as any);
+export { isConfigValid };
 
 const MASTER_ADMIN_EMAIL = 'harsh.maurya101112@gmail.com';
 

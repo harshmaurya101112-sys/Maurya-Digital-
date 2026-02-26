@@ -8,7 +8,8 @@ import {
   onAuthStateChanged, 
   syncUserToFirestore, 
   updateWalletOnDB, 
-  logoutUser 
+  logoutUser,
+  isConfigValid
 } from './firebase';
 import { UserProfile } from './types';
 import AuthPage from './pages/Auth';
@@ -33,6 +34,10 @@ const MainApp: React.FC = () => {
   }, [currentPage]);
 
   useEffect(() => {
+    if (!isConfigValid) {
+      setLoading(false);
+      return;
+    }
     const unsubscribeAuth = onAuthStateChanged(auth, async (fUser) => {
       setFirebaseUser(fUser);
       if (fUser) {
@@ -85,6 +90,26 @@ const MainApp: React.FC = () => {
         <div className="mt-8 text-center">
           <h3 className="text-lg font-black text-blue-950 uppercase tracking-widest">Maurya Portal</h3>
           <p className="text-slate-400 font-bold uppercase tracking-[0.3em] text-[10px] mt-2 animate-pulse">Establishing Secure Session...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isConfigValid) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-10 text-center">
+        <div className="bg-red-100 p-6 rounded-3xl mb-8">
+          <ShieldCheck className="text-red-600 w-16 h-16" />
+        </div>
+        <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight mb-4">Configuration Required</h2>
+        <p className="text-slate-500 max-w-md mb-8 font-medium">Please set your Firebase environment variables (API Key, Project ID, etc.) in the project settings to enable the portal.</p>
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 text-left w-full max-w-lg">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Required Variables:</p>
+          <ul className="space-y-2 text-xs font-mono text-slate-600">
+            <li>• VITE_FIREBASE_API_KEY</li>
+            <li>• VITE_FIREBASE_AUTH_DOMAIN</li>
+            <li>• VITE_FIREBASE_PROJECT_ID</li>
+          </ul>
         </div>
       </div>
     );
