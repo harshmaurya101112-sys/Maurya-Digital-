@@ -20,7 +20,9 @@ const firebaseConfig = {
   projectId: (import.meta as any).env.VITE_FIREBASE_PROJECT_ID,
   storageBucket: (import.meta as any).env.VITE_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: (import.meta as any).env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: (import.meta as any).env.VITE_FIREBASE_APP_ID
+  appId: (import.meta as any).env.VITE_FIREBASE_APP_ID,
+  databaseURL: (import.meta as any).env.VITE_FIREBASE_DATABASE_URL,
+  measurementId: (import.meta as any).env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 // Validate config before initializing
@@ -56,14 +58,16 @@ export const syncUserToFirestore = async (firebaseUser: any) => {
         photoURL: firebaseUser.photoURL || '',
         isAdmin: isAdmin,
         walletBalance: 0,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        walletPin: '0000' // Default PIN for new users
       };
       await setDoc(userRef, newProfile);
       return newProfile;
     } else {
+      const existingData = snap.data();
       // Refresh admin status just in case
       await updateDoc(userRef, { isAdmin });
-      return { ...snap.data(), isAdmin } as UserProfile;
+      return { ...existingData, isAdmin } as UserProfile;
     }
   } catch (err) {
     console.error("Firestore Sync Error:", err);

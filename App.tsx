@@ -38,20 +38,36 @@ const MainApp: React.FC = () => {
       setLoading(false);
       return;
     }
+
+    let unsubDoc: (() => void) | null = null;
+
     const unsubscribeAuth = onAuthStateChanged(auth, async (fUser) => {
+      // Cleanup previous doc listener if any
+      if (unsubDoc) {
+        unsubDoc();
+        unsubDoc = null;
+      }
+
       setFirebaseUser(fUser);
+      
       if (fUser) {
         try {
           const profile = await syncUserToFirestore(fUser);
           if (profile) {
+            setUser(profile); // Set initial profile immediately
+            
             // Listen for real-time changes to the user document
-            const unsubDoc = onSnapshot(doc(db, "users", profile.uid), (doc) => {
-              if (doc.exists()) {
-                setUser(doc.data() as UserProfile);
+            unsubDoc = onSnapshot(doc(db, "users", profile.uid), (snapshot) => {
+              if (snapshot.exists()) {
+                setUser(snapshot.data() as UserProfile);
               }
               setLoading(false);
+            }, (error) => {
+              console.error("Firestore Snapshot Error:", error);
+              setLoading(false);
             });
-            return () => unsubDoc();
+          } else {
+            setLoading(false);
           }
         } catch (error) {
           console.error("App Sync Error:", error);
@@ -63,7 +79,10 @@ const MainApp: React.FC = () => {
       }
     });
 
-    return () => unsubscribeAuth();
+    return () => {
+      unsubscribeAuth();
+      if (unsubDoc) unsubDoc();
+    };
   }, []);
 
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
