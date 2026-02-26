@@ -181,7 +181,15 @@ const MainApp: React.FC = () => {
 
   // Force PIN Setup if not set or default
   if (!user.walletPin || user.walletPin === '0000') {
-    return <PinSetup uid={user.uid} onComplete={() => showToast('Wallet PIN Activated!', 'success')} />;
+    return (
+      <PinSetup 
+        uid={user.uid} 
+        onComplete={(newPin) => {
+          setUser({ ...user, walletPin: newPin });
+          showToast('Wallet PIN Activated!', 'success');
+        }} 
+      />
+    );
   }
 
   return (

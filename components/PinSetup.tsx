@@ -5,7 +5,7 @@ import { setWalletPinDB } from '../firebase';
 
 interface PinSetupProps {
   uid: string;
-  onComplete: () => void;
+  onComplete: (newPin: string) => void;
 }
 
 const PinSetup: React.FC<PinSetupProps> = ({ uid, onComplete }) => {
@@ -17,6 +17,7 @@ const PinSetup: React.FC<PinSetupProps> = ({ uid, onComplete }) => {
   const handleSetPin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    console.log("Attempting to set PIN for UID:", uid);
 
     if (pin.length !== 4 || !/^\d+$/.test(pin)) {
       setError('PIN must be 4 digits');
@@ -31,9 +32,11 @@ const PinSetup: React.FC<PinSetupProps> = ({ uid, onComplete }) => {
     setLoading(true);
     try {
       await setWalletPinDB(uid, pin);
-      onComplete();
+      console.log("PIN set successfully in DB");
+      onComplete(pin);
     } catch (err: any) {
-      setError(err.message || 'Failed to set PIN');
+      console.error("PIN Setup Error:", err);
+      setError(err.message || 'Failed to set PIN. Check your internet or permissions.');
     } finally {
       setLoading(false);
     }

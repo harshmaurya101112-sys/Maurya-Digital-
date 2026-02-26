@@ -119,7 +119,8 @@ export const processSecurePayment = async (amount: number) => {
 };
 
 export const setWalletPinDB = async (uid: string, pin: string) => {
-  await updateDoc(doc(db, "users", uid), { walletPin: pin });
+  const userRef = doc(db, "users", uid);
+  await setDoc(userRef, { walletPin: pin }, { merge: true });
 };
 
 export { 
